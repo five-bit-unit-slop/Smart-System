@@ -95,15 +95,24 @@ Bij storingen moet het systeem zo snel mogelijk herstellen.
     - Werkt goed samen met Python, FastAPI en SQLAlchemy.
     - Ondersteunt relaties tussen gegevens, zoals gebruikers, apparaten en beveiligingsgebeurtenissen.
     - Open-source en gratis te gebruiken. (Hell Yeah)
+- Welke databaseplatformen gebruiken we?
+  - Neon
+    - primair
+    - Gratis plan
+  - Supabase
+    - Secundaire/testomgeving
+    - Gratis Free-plan
+  - Waarom niet azure?
+    - kort 17 dollar per maand op het goedkoops.
 - Hoe vaak maken we back-ups?
   - Elke 24 uur (dagelijks).
   - Extra back-up vóór belangrijke wijzigingen of updates.
 - Hoe lang bewaren we back-ups?
-  - 
-- Hoe herstellen we de database?
   - 30 dagen.
   - Dagelijkse back-ups bewaren we gedurende 30 dagen.
   - Daarna worden ze automatisch verwijderd.
+- Hoe herstellen we de database?
+  Met backups.
 - Hoe monitoren we de hosting?
   - Uptime monitoring (controleren of de website bereikbaar is).
   - Serverlogs (fouten en activiteiten bijhouden).
