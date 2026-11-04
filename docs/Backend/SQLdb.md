@@ -53,7 +53,7 @@ De combinatie `device_id` en `sensor_key` moet uniek zijn.
 
 | Kolom | Type | Constraints | Doel |
 |---|---|---|---|
-| `id` | BIGINT IDENTITY(1,1) | PRIMARY KEY | Unieke meetwaarde-ID |
+| `id` | UNIQUEIDENTIFIER | PRIMARY KEY | Unieke meetwaarde-ID |
 | `sensor_id` | UNIQUEIDENTIFIER | FOREIGN KEY, NOT NULL | Gekoppelde sensor |
 | `request_id` | UNIQUEIDENTIFIER | NOT NULL, UNIQUE | Unieke identificatie van een meetrequest |
 | `value` | DECIMAL(10,3) | NOT NULL | Gemeten waarde |

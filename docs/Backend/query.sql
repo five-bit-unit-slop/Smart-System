@@ -1,0 +1,54 @@
+CREATE TABLE dbo.Users(
+    id UNIQUEIDENTIFIER PRIMARY KEY
+        CONSTRAINT DF_Users_id DEFAULT NEWID(),
+
+    username NVARCHAR(50) NOT NULL UNIQUE,
+
+    password_hash NVARCHAR(255) NOT NULL,
+
+    role NVARCHAR(20) NOT NULL
+        CONSTRAINT CK_Users_role CHECK (role IN ('Admin', 'User')),
+
+    created_at DATETIME2 NOT NULL
+        CONSTRAINT DF_Users_created_at DEFAULT SYSUTCDATETIME(),
+
+    is_active BIT NOT NULL
+        CONSTRAINT DF_Users_is_active DEFAULT 1
+);
+
+CREATE TABLE dbo.Devices(
+    id UNIQUEIDENTIFIER PRIMARY KEY 
+        CONSTRAINT DF_Devices_id DEFAULT NEWID(),
+
+    device_name NVARCHAR(100) NOT NULL,
+
+    device_token_hash CHAR(64) NOT NULL UNIQUE,
+
+    last_seen DATETIME2,
+
+    created_at DATETIME2 NOT NULL 
+        CONSTRAINT DF_Devices_created_at DEFAULT SYSUTCDATETIME(),
+
+    is_active BIT NOT NULL
+        CONSTRAINT DF_Devices_is_active DEFAULT 1
+);
+
+CREATE TABLE dbo.Sensors(
+    id UNIQUEIDENTIFIER PRIMARY KEY
+        CONSTRAINT DF_Sensors_id DEFAULT NEWID(),
+
+    device_id UNIQUEIDENTIFIER NOT NULL
+        FOREIGN KEY REFERENCES dbo.Devices(id),
+
+    sensor_key NVARCHAR(100) NOT NULL,
+
+    sensor_type NVARCHAR(50) NOT NULL,
+
+    unit NVARCHAR(20) NOT NULL,
+
+    is_active BIT NOT NULL
+        CONSTRAINT DF_Sensors_is_active DEFAULT 1,
+
+    created_at DATETIME2 NOT NULL
+        CONSTRAINT DF_Sensors_created_at DEFAULT SYSUTCDATETIME()
+);
