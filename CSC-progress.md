@@ -1,3 +1,4 @@
 - [x] MSSQL database op azure
 - [ ] SQL db in orde
+- [ ] MITM server gecodeerd.
 - [ ] MITM server up
