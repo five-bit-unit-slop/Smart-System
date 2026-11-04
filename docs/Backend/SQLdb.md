@@ -16,7 +16,6 @@
 |---|---|---|---|
 | `id` | UNIQUEIDENTIFIER | PRIMARY KEY, DEFAULT NEWID() | Unieke gebruikers-ID |
 | `username` | NVARCHAR(50) | NOT NULL, UNIQUE | Gebruikersnaam |
-| `email` | NVARCHAR(255) | NOT NULL, UNIQUE | E-mailadres |
 | `password_hash` | NVARCHAR(255) | NOT NULL | Gehashte wachtwoord |
 | `role` | NVARCHAR(20) | NOT NULL, CHECK (`role IN ('Admin', 'User')`) | Gebruikersrol |
 | `created_at` | DATETIME2 | NOT NULL, DEFAULT SYSUTCDATETIME() | Aanmaakdatum |
