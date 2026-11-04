@@ -1,6 +1,6 @@
-# SmartSystemDB - Database Design
+**# SmartSystemDB - Database Design**
 
-## Root
+**## Root**
 
 | Tabel | Doel |
 |---|---|
@@ -10,7 +10,7 @@
 | `Measurements` | Historische meetwaarden |
 | `Alerts` | Waarschuwingen op basis van meetwaarden |
 
-## Users
+**## Users**
 
 | Kolom | Type | Constraints | Doel |
 |---|---|---|---|
@@ -21,7 +21,7 @@
 | `created_at` | DATETIME2 | NOT NULL, DEFAULT SYSUTCDATETIME() | Aanmaakdatum |
 | `is_active` | BIT | NOT NULL, DEFAULT 1 | Account actief of uitgeschakeld |
 
-## Devices
+**## Devices**
 
 | Kolom | Type | Constraints | Doel |
 |---|---|---|---|
@@ -34,12 +34,12 @@
 
 De actuele apparaatstatus kan worden bepaald aan de hand van `last_seen`.
 
-## Sensors
+**## Sensors**
 
 | Kolom | Type | Constraints | Doel |
 |---|---|---|---|
 | `id` | UNIQUEIDENTIFIER | PRIMARY KEY, DEFAULT NEWID() | Unieke sensor-ID |
-| `device_id` | UNIQUEIDENTIFIER | FOREIGN KEY, NOT NULL | Gekoppeld apparaat |
+| `device_id` | UNIQUEIDENTIFIER | NOT NULL, FOREIGN KEY REFERENCES `Devices(id)` | Gekoppeld apparaat |
 | `sensor_key` | NVARCHAR(50) | NOT NULL | Unieke identificatie binnen het apparaat |
 | `sensor_name` | NVARCHAR(100) | NOT NULL | Naam van de sensor |
 | `sensor_type` | NVARCHAR(50) | NOT NULL | Type sensor |
@@ -49,24 +49,24 @@ De actuele apparaatstatus kan worden bepaald aan de hand van `last_seen`.
 
 De combinatie `device_id` en `sensor_key` moet uniek zijn.
 
-## Measurements
+**## Measurements**
 
 | Kolom | Type | Constraints | Doel |
 |---|---|---|---|
-| `id` | UNIQUEIDENTIFIER | PRIMARY KEY | Unieke meetwaarde-ID |
-| `sensor_id` | UNIQUEIDENTIFIER | FOREIGN KEY, NOT NULL | Gekoppelde sensor |
+| `id` | UNIQUEIDENTIFIER | PRIMARY KEY, DEFAULT NEWID() | Unieke meetwaarde-ID |
+| `sensor_id` | UNIQUEIDENTIFIER | NOT NULL, FOREIGN KEY REFERENCES `Sensors(id)` | Gekoppelde sensor |
 | `request_id` | UNIQUEIDENTIFIER | NOT NULL, UNIQUE | Unieke identificatie van een meetrequest |
-| `value` | DECIMAL(10,3) | NOT NULL | Gemeten waarde |
+| `measurement_value` | DECIMAL(10,3) | NOT NULL | Gemeten waarde |
 | `recorded_at` | DATETIME2 | NOT NULL | Tijdstip waarop de meting is uitgevoerd |
 | `received_at` | DATETIME2 | NOT NULL, DEFAULT SYSUTCDATETIME() | Tijdstip waarop de meting is opgeslagen |
 
-## Alerts
+**## Alerts**
 
 | Kolom | Type | Constraints | Doel |
 |---|---|---|---|
 | `id` | UNIQUEIDENTIFIER | PRIMARY KEY, DEFAULT NEWID() | Unieke waarschuwing-ID |
-| `sensor_id` | UNIQUEIDENTIFIER | FOREIGN KEY, NOT NULL | Betrokken sensor |
-| `measurement_id` | BIGINT | FOREIGN KEY, NULL | Meetwaarde die de waarschuwing heeft veroorzaakt |
+| `sensor_id` | UNIQUEIDENTIFIER | NOT NULL, FOREIGN KEY REFERENCES `Sensors(id)` | Betrokken sensor |
+| `measurement_id` | UNIQUEIDENTIFIER | NULL, FOREIGN KEY REFERENCES `Measurements(id)` | Meetwaarde die de waarschuwing heeft veroorzaakt |
 | `alert_type` | NVARCHAR(50) | NOT NULL | Type waarschuwing |
 | `message` | NVARCHAR(500) | NOT NULL | Beschrijving van waarschuwing |
 | `severity` | NVARCHAR(20) | NOT NULL, CHECK (`severity IN ('Info', 'Warning', 'Critical')`) | Ernst van de waarschuwing |
@@ -79,7 +79,7 @@ Aanvullende CHECK-constraint:
 - Als `is_resolved = 0`, moet `resolved_at` NULL zijn.
 - Als `is_resolved = 1`, moet `resolved_at` een tijdstip bevatten.
 
-## Relaties
+**## Relaties**
 
 | Parent | Child | Relatie |
 |---|---|---|
@@ -88,14 +88,15 @@ Aanvullende CHECK-constraint:
 | `Sensors.id` | `Alerts.sensor_id` | 1:N |
 | `Measurements.id` | `Alerts.measurement_id` | 1:N |
 
-## Database-afspraken
+**## Database-afspraken**
 
 - Alle tijdstippen worden opgeslagen in UTC.
 - Primaire sleutels zijn uniek.
 - Foreign keys waarborgen referentiële integriteit.
+- Foreign keys verwijzen naar de primaire sleutel van de gekoppelde parent-tabel.
 - Gebruikerswachtwoorden worden gehasht met Argon2id.
 - Authenticatietokens worden niet als plaintext opgeslagen.
-- `Measurements.id` wordt automatisch gegenereerd met `IDENTITY(1,1)`.
+- Alle primaire sleutels worden gegenereerd met `DEFAULT NEWID()`.
 - `Measurements` bewaart historische meetwaarden.
 - `request_id` is uniek per meetrequest.
 - `Devices.last_seen` bevat het laatste geregistreerde contactmoment.

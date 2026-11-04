@@ -52,3 +52,20 @@ CREATE TABLE dbo.Sensors(
     created_at DATETIME2 NOT NULL
         CONSTRAINT DF_Sensors_created_at DEFAULT SYSUTCDATETIME()
 );
+
+CREATE TABLE dbo.Measurements(
+    id UNIQUEIDENTIFIER PRIMARY KEY
+        CONSTRAINT DF_Measurements_id DEFAULT NEWID(),
+
+    sensor_id UNIQUEIDENTIFIER NOT NULL
+        FOREIGN KEY REFERENCES dbo.Sensors(id),
+
+    request_id UNIQUEIDENTIFIER NOT NULL UNIQUE,
+
+    measurement_value DECIMAL(10,3) NOT NULL,
+
+    recorded_at DATETIME2 NOT NULL,
+
+    received_at DATETIME2 NOT NULL
+        CONSTRAINT DF_Measurements_received_at DEFAULT SYSUTCDATETIME()
+);
