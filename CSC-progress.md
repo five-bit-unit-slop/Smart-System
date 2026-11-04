@@ -1,0 +1,3 @@
+- [x] MSSQL database op azure
+- [ ] SQL db in orde
+- [ ] MITM server up
