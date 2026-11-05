@@ -18,10 +18,10 @@ Het systeem is ontworpen om ongewenste toegang te detecteren, een alarm te activ
 ## Technische onderdelen
 
 - ~~ESP32-microcontroller~~ -> Pico
-- Bewegingssensor
+- ~~Bewegingssensor~~ -> LDR
 - RFID-lezer of keypad *
     - beginpunt
-- Buzzer en indicatie-leds
+- ~~Buzzer en~~ indicatie-leds
 - Backend en database -> bezig
 - ~~Webdashboard~~ -> tkinter
 
