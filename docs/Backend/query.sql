@@ -16,17 +16,35 @@ CREATE TABLE dbo.Users(
         CONSTRAINT DF_Users_is_active DEFAULT 1
 );
 
-CREATE TABLE dbo.Devices(
-    id UNIQUEIDENTIFIER PRIMARY KEY 
-        CONSTRAINT DF_Devices_id DEFAULT NEWID(),
+CREATE TABLE dbo.Gateways(
+    id UNIQUEIDENTIFIER PRIMARY KEY
+        CONSTRAINT DF_Gateways_id DEFAULT NEWID(),
 
-    device_name NVARCHAR(100) NOT NULL,
+    gateway_name NVARCHAR(100) NOT NULL,
 
-    device_token_hash CHAR(64) NOT NULL UNIQUE,
+    gateway_token_hash CHAR(64) NOT NULL UNIQUE,
 
     last_seen DATETIME2,
 
-    created_at DATETIME2 NOT NULL 
+    created_at DATETIME2 NOT NULL
+        CONSTRAINT DF_Gateways_created_at DEFAULT SYSUTCDATETIME(),
+
+    is_active BIT NOT NULL
+        CONSTRAINT DF_Gateways_is_active DEFAULT 1
+);
+
+CREATE TABLE dbo.Devices(
+    id UNIQUEIDENTIFIER PRIMARY KEY
+        CONSTRAINT DF_Devices_id DEFAULT NEWID(),
+
+    gateway_id UNIQUEIDENTIFIER NOT NULL
+        FOREIGN KEY REFERENCES dbo.Gateways(id),
+
+    device_name NVARCHAR(100) NOT NULL,
+
+    last_seen DATETIME2,
+
+    created_at DATETIME2 NOT NULL
         CONSTRAINT DF_Devices_created_at DEFAULT SYSUTCDATETIME(),
 
     is_active BIT NOT NULL
@@ -42,6 +60,8 @@ CREATE TABLE dbo.Sensors(
 
     sensor_key NVARCHAR(100) NOT NULL,
 
+    sensor_name NVARCHAR(100) NOT NULL,
+
     sensor_type NVARCHAR(50) NOT NULL,
 
     unit NVARCHAR(20) NOT NULL,
@@ -50,7 +70,9 @@ CREATE TABLE dbo.Sensors(
         CONSTRAINT DF_Sensors_is_active DEFAULT 1,
 
     created_at DATETIME2 NOT NULL
-        CONSTRAINT DF_Sensors_created_at DEFAULT SYSUTCDATETIME()
+        CONSTRAINT DF_Sensors_created_at DEFAULT SYSUTCDATETIME(),
+
+    CONSTRAINT UQ_Sensors_device_key UNIQUE(device_id, sensor_key)
 );
 
 CREATE TABLE dbo.Measurements(
@@ -60,14 +82,16 @@ CREATE TABLE dbo.Measurements(
     sensor_id UNIQUEIDENTIFIER NOT NULL
         FOREIGN KEY REFERENCES dbo.Sensors(id),
 
-    request_id UNIQUEIDENTIFIER NOT NULL UNIQUE,
+    request_id UNIQUEIDENTIFIER NOT NULL,
 
     measurement_value DECIMAL(10,3) NOT NULL,
 
     recorded_at DATETIME2 NOT NULL,
 
     received_at DATETIME2 NOT NULL
-        CONSTRAINT DF_Measurements_received_at DEFAULT SYSUTCDATETIME()
+        CONSTRAINT DF_Measurements_received_at DEFAULT SYSUTCDATETIME(),
+
+    CONSTRAINT UQ_Measurements_request_sensor UNIQUE(request_id, sensor_id)
 );
 
 CREATE TABLE dbo.Alerts(

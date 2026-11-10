@@ -6,30 +6,22 @@
 
 ## 1. Architectuur en hosting
 
-De infrastructuur bestaat uit een lokale Raspberry Pi-server, een cloud-database en een desktopapplicatie.
+De infrastructuur bestaat uit een lokale Raspberry Pi-gateway, een cloudgebaseerde MITM-server, een database en een desktopapplicatie.
 
-### 1.1 Raspberry Pi - lokale server
+### 1.1 Raspberry Pi - DMZ gateway
 
-De Raspberry Pi fungeert als lokale server en gateway binnen het Smart Home Security-systeem.
+De Raspberry Pi fungeert als lokale gateway tussen de Pico devices en de MITM-server binnen het Smart Home Security-systeem.
 
 Verantwoordelijkheden:
-- Ontvangen van de datastream vanuit TI.
+- Ontvangen van meetgegevens vanuit de Pico devices.
 - Verwerken en valideren van binnenkomende meetgegevens.
-- Beschikbaar stellen van een API voor de SD-applicatie.
-- Tijdelijk lokaal opslaan van gegevens wanneer de internetverbinding of clouddatabase niet beschikbaar is.
-- Synchroniseren van tijdelijk opgeslagen gegevens zodra de verbinding hersteld is.
-- Uitvoeren van lokale functionaliteit, zoals alarmverwerking, zonder afhankelijk te zijn van de cloud.
+- Doorsturen van gegevens naar de MITM-server.
+- Communicatie met de MITM-server via een beveiligde HTTPS-verbinding.
+- Verzorgen van lokale communicatie met aangesloten Pico devices.
 
-Voorgestelde software:
-- Python - programmeertaal.
-- FastAPI - API-framework.
-- Uvicorn - server die FastAPI uitvoert.
-- SQLAlchemy - ORM voor communicatie met Azure SQL Database.
-- Microsoft ODBC Driver - databaseverbinding vanuit Python.
-- SQLite - optionele lokale wachtrij voor tijdelijke gegevensopslag.
-- Mosquitto - optionele MQTT-broker, afhankelijk van het datatransport dat TI gebruikt.
+De Raspberry Pi host niet de centrale backend of database. Deze onderdelen worden afzonderlijk gehost.
 
-De backend moet automatisch starten wanneer de Raspberry Pi opstart.
+De gatewaysoftware moet automatisch starten wanneer de Raspberry Pi opstart.
 
 Aandachtspunten:
 - Automatisch herstarten bij crashes via `systemd`.
@@ -37,12 +29,20 @@ Aandachtspunten:
 - Crashreden en tijdstip bewaren.
 - Periodieke healthchecks uitvoeren.
 - Software en besturingssysteem up-to-date houden.
-- API standaard alleen toegankelijk maken via het lokale netwerk.
+- Lokale communicatie standaard alleen toegankelijk maken via het lokale netwerk.
 - Geen onnodige poorten rechtstreeks openstellen op het internet.
 
 ### 1.2 Cloudhosting en frontend
 
-De Raspberry Pi host de backend voor het lokale systeem. Azure wordt gebruikt voor centrale databaseopslag.
+De Cloudflare Worker vormt de MITM-server en verzorgt de API-communicatie tussen de clients en Azure SQL Database.
+
+De onderdelen:
+- Cloudflare Workers - Hosting van de MITM API, geschreven in TypeScript.
+- Azure SQL Database - Centrale database voor applicatie- en meetgegevens.
+- Tkinter - Desktopapplicatie die lokaal op een computer wordt uitgevoerd.
+- Raspberry Pi (DMZ) - Lokale gateway voor de Pico devices.
+
+De Tkinter-applicatie en Raspberry Pi communiceren met de MITM API. Geen van beide maakt rechtstreeks verbinding met Azure SQL Database.
 
 De SD-applicatie is een Tkinter-desktopapplicatie en wordt lokaal op een computer uitgevoerd. Deze applicatie hoeft dus niet via een websitehostingprovider gehost te worden.
 
@@ -55,7 +55,7 @@ Voor een eventuele afzonderlijke statische website zijn de volgende opties besch
 - Firebase Hosting (`.web.app`)
 - Azure Static Web Apps (`.azurestaticapps.net`)
 
-Deze platformen zijn bedoeld voor een afzonderlijke website en vervangen de Raspberry Pi-backend niet.
+Deze platformen zijn bedoeld voor een afzonderlijke website en vervangen de MITM API niet.
 
 ### 1.3 Netwerkbeveiliging
 
@@ -74,13 +74,13 @@ Aandachtspunten:
 
 ### 1.4 Monitoring en automatisch herstel
 
-De Raspberry Pi en backend moeten controleerbaar en herstelbaar zijn.
+De Raspberry Pi en MITM API moeten controleerbaar en herstelbaar zijn.
 
 Aandachtspunten:
 - Healthcheck-endpoint, bijvoorbeeld `/api/health`.
 - Monitoring van de beschikbaarheid van de Raspberry Pi.
 - Serverlogs voor fouten en activiteiten.
-- Automatische herstart van backendservices.
+- Automatische herstart van lokale gatewayservices.
 - Logging van crashredenen en herstartmomenten.
 - Meldingen bij langdurige uitval.
 - Logbestanden automatisch rouleren om opslagproblemen te voorkomen.
@@ -101,7 +101,7 @@ Redenen:
 - Geschikt voor gegevens zoals gebruikers, apparaten, meetwaarden en beveiligingsgebeurtenissen.
 - Integratie met andere Azure-diensten.
 - Automatische databaseback-ups en herstelmogelijkheden.
-- Ondersteuning voor Python via SQLAlchemy en Microsoft ODBC.
+- Ondersteuning voor communicatie vanuit de MITM API.
 
 De applicatie gebruikt SQL Server/T-SQL in plaats van PostgreSQL.
 
@@ -111,14 +111,14 @@ De applicatie gebruikt SQL Server/T-SQL in plaats van PostgreSQL.
 - Primaire databaseomgeving.
 - Beheerde SQL-database in Azure.
 - Centrale opslag voor meetgegevens en applicatiegegevens.
-- Toegankelijk vanuit de Raspberry Pi-backend via een beveiligde databaseverbinding.
+- Toegankelijk vanuit de MITM API via een beveiligde databaseverbinding.
 - Databasebeheer en automatische back-ups worden grotendeels door Azure verzorgd.
 
 Neon en Supabase worden niet gebruikt als primaire databaseplatformen.
 
 ### 2.3 Lokale opslag op de Raspberry Pi
 
-De Raspberry Pi moet tijdelijk gegevens kunnen opslaan wanneer de cloudverbinding uitvalt.
+De Raspberry Pi moet eventueel tijdelijk gegevens kunnen opslaan wanneer de cloudverbinding uitvalt.
 
 Voorgestelde oplossing:
 - SQLite als lokale wachtrij.
@@ -137,7 +137,8 @@ Voorgestelde toegangsniveaus:
 
 | Onderdeel | Rechten |
 |---|---|
-| Raspberry Pi-backend | Benodigde lees- en schrijfrechten |
+| MITM API | Benodigde lees- en schrijfrechten |
+| Raspberry Pi (DMZ) | Alleen toegang via de API |
 | Tkinter-applicatie | Alleen toegang via de API |
 | Normale gebruiker | Alleen toegestane applicatiefuncties |
 | Databasebeheerder | Beheer- en migratierechten |
@@ -146,7 +147,7 @@ Voorgestelde toegangsniveaus:
 Aanvullende aandachtspunten:
 - Afzonderlijke databaseaccounts voor verschillende functies.
 - Geen databasebeheerdersaccount gebruiken voor reguliere applicatieverbindingen.
-- Databasecredentials niet opnemen in de Tkinter-applicatie.
+- Databasecredentials niet opnemen in de Tkinter-applicatie of Raspberry Pi.
 - Verbindingen met Azure SQL versleutelen.
 - Toegang en wijzigingen waar relevant loggen.
 - Firewallregels en netwerktoegang beperken.
@@ -156,7 +157,7 @@ Aanvullende aandachtspunten:
 Bij uitval van Azure SQL moet het lokale systeem zo veel mogelijk blijven functioneren.
 
 Maatregelen:
-- Meetgegevens tijdelijk opslaan op de Raspberry Pi.
+- Meetgegevens eventueel tijdelijk opslaan op de Raspberry Pi.
 - Lokale alarmfunctionaliteit onafhankelijk van de cloud laten werken.
 - Periodiek opnieuw proberen verbinding te maken.
 - Gegevens synchroniseren zodra Azure SQL weer bereikbaar is.
@@ -218,8 +219,8 @@ Aandachtspunten:
 De lokale Raspberry Pi-opslag valt niet automatisch onder de Azure SQL-back-ups.
 
 Daarom moeten ook de volgende onderdelen worden meegenomen:
-- SQLite-wachtrij.
-- Backendconfiguratie.
+- SQLite-wachtrij, indien gebruikt.
+- Gatewayconfiguratie.
 - Benodigde configuratiebestanden.
 - Serviceconfiguratie.
 - Eventuele lokale certificaten en sleutels, veilig opgeslagen.
@@ -232,10 +233,11 @@ Bij storingen moet het systeem zo veel mogelijk zelfstandig kunnen herstellen.
 
 | Probleem | Maatregel |
 |---|---|
-| Raspberry Pi crasht | Backend automatisch opnieuw starten via `systemd` |
+| Raspberry Pi crasht | Gatewayservice automatisch opnieuw starten via `systemd` |
 | Raspberry Pi valt uit | Herstelprocedure en eventueel lokale noodvoorziening |
-| Backend crasht | Automatische herstart en logging van crashreden |
-| Internetverbinding valt uit | Meetgegevens lokaal opslaan en later synchroniseren |
+| Gatewayservice crasht | Automatische herstart en logging van crashreden |
+| MITM API valt uit | Fouten registreren en verzoeken opnieuw proberen |
+| Internetverbinding valt uit | Meetgegevens eventueel lokaal opslaan en later synchroniseren |
 | Azure SQL valt uit | Lokale opslagbuffer en automatische reconnect |
 | Database beschadigd | Herstel vanuit Azure-back-ups |
 | Databasegegevens verloren | Point-in-time restore of aanvullende back-up terugzetten |
@@ -248,9 +250,9 @@ Bij storingen moet het systeem zo veel mogelijk zelfstandig kunnen herstellen.
 De lokale Raspberry Pi moet niet volledig afhankelijk zijn van de cloud.
 
 Bij internet- of database-uitval:
-- Meetgegevens blijven lokaal beschikbaar.
+- Meetgegevens kunnen lokaal beschikbaar blijven.
 - Lokale alarmverwerking blijft actief zolang de Raspberry Pi en benodigde hardware werken.
-- De backend blijft beschikbaar via het lokale netwerk.
+- De gateway blijft beschikbaar via het lokale netwerk.
 - Gegevens worden later naar Azure SQL gesynchroniseerd.
 
 Let op: wanneer de Raspberry Pi zelf uitvalt, kan software op diezelfde Raspberry Pi niet blijven functioneren. Kritieke alarmfunctionaliteit vereist daarom eventueel een onafhankelijke hardwarematige noodvoorziening.
@@ -288,13 +290,10 @@ De volgende onderdelen moeten nog definitief worden vastgesteld.
 ### 5.3 Backendtechnologie
 
 Voorlopige keuze:
-- Python (programmeertaal).
-  - FastAPI (API-framework).
-  - Uvicorn (server die FastAPI uitvoert).
-  - SQLAlchemy (ORM voor communicatie met Azure SQL Database).
-  - PyODBC en Microsoft ODBC Driver (databaseverbinding).
-- SQLite (lokale tijdelijke gegevensopslag).
-- Mosquitto (optionele MQTT-broker).
+- TypeScript - programmeertaal.
+- Cloudflare Workers - hosting van de MITM API.
+- Raspberry Pi - lokale gateway voor Pico devices.
+- Azure SQL Database - centrale database.
 
 ### 5.4 Database en hosting
 
@@ -305,17 +304,23 @@ Voorlopige keuze:
   - Gebaseerd op de Microsoft SQL Server-engine.
   - Gebruik van SQL Server/T-SQL.
 
-**Lokale server:**
+**MITM-server:**
+- Cloudflare Workers.
+  - Hosting van de MITM API.
+  - Geschreven in TypeScript.
+  - Verzorgt de communicatie tussen clients en Azure SQL Database.
+
+**Lokale gateway:**
 - Raspberry Pi.
-  - Lokale backendhosting.
-  - Verwerking van de TI-datastream.
-  - API voor de SD-applicatie.
-  - Tijdelijke gegevensopslag en synchronisatie.
+  - Lokale gateway voor Pico devices.
+  - Ontvangen en doorsturen van de TI-datastream.
+  - Communicatie met de MITM API.
+  - Eventueel tijdelijke gegevensopslag en synchronisatie.
 
 Nog vast te stellen:
 - Welk Azure SQL-serviceniveau gebruiken we?
 - Welke regio gebruiken we?
-- Hoe beveiligen we de verbinding vanaf de Raspberry Pi?
+- Hoe beveiligen we de verbinding vanuit de MITM API?
 - Welke netwerktoegangsinstellingen zijn nodig?
 - Welke kosten en eventuele studententegoeden zijn beschikbaar?
 
@@ -328,7 +333,7 @@ Nog vast te stellen:
 - Regelmatig hersteltesten uitvoeren.
 
 ### 5.6 Monitoring
-- Uptime monitoring van de Raspberry Pi en backend.
+- Uptime monitoring van de Raspberry Pi, gateway en MITM API.
 - Serverlogs voor fouten en activiteiten.
 - Healthcheck-endpoint.
 - Meldingen bij storingen of langdurige downtime.
@@ -338,7 +343,7 @@ Nog vast te stellen:
 
 ## 6. Doel
 
-Een veilige en betrouwbare hostingomgeving realiseren waarbij de Raspberry Pi de lokale verwerking en beschikbaarheid verzorgt, terwijl Azure SQL Database de centrale gegevensopslag verzorgt.
+Een veilige en betrouwbare hostingomgeving realiseren waarbij de Raspberry Pi de lokale gateway en communicatie met de Pico devices verzorgt, terwijl de Cloudflare Worker de API-communicatie afhandelt en Azure SQL Database de centrale gegevensopslag verzorgt.
 
 Het systeem moet:
 - Lokaal kunnen functioneren zonder internetverbinding.

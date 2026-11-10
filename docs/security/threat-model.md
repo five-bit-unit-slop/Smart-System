@@ -6,25 +6,35 @@
 ## 1. Systeemarchitectuur
 
 ```text
-Sensoren / RFID
+Pico W devices
       |
-    ESP32
+  Local network
       |
-     Wi-Fi
+ Raspberry Pi
+     (DMZ)
       |
-  Backend API
+     HTTPS
       |
-   Database
+ Cloudflare Worker
+   (MITM API)
       |
-  Webdashboard
+  Azure SQL Database
+
+Tkinter application
+      |
+     HTTPS
+      |
+ Cloudflare Worker
 ```
 
 ## 2. Te beschermen onderdelen
 
-- ESP32 en firmware
+- Pico W devices en firmware
+- Raspberry Pi (DMZ)
 - Gebruikersaccounts
-- RFID-toegangsgegevens
-- API en database
+- Toegangsgegevens
+- MITM API
+- Azure SQL Database
 - Netwerkcommunicatie
 - Alarmsysteem
 
@@ -32,12 +42,14 @@ Sensoren / RFID
 
 | Dreiging | Gevolg | Maatregel |
 |---|---|---|
-| Dashboard hacken | Alarm uitschakelen | Authenticatie |
-| Netwerkverkeer onderscheppen | Gegevens uitlekken | TLS |
-| RFID kopiëren | Ongewenste toegang | Veilige RFID-technologie |
-| API misbruiken | Systeem manipuleren | Autorisatie |
-| ESP32 manipuleren | Beveiliging omzeilen | Apparaatbeveiliging |
-| Geheimen lekken via GitHub | Accounts overnemen | Secrets veilig opslaan |
+| Tkinter-applicatie hacken | Ongeautoriseerde acties | Authenticatie en autorisatie |
+| Netwerkverkeer onderscheppen | Gegevens uitlekken of wijzigen | TLS |
+| Toegangsgegevens kopiëren | Ongewenste toegang | Veilige opslag van toegangsgegevens |
+| MITM API misbruiken | Systeem of gegevens manipuleren | Authenticatie en autorisatie |
+| Raspberry Pi manipuleren | Beveiliging omzeilen of gegevens wijzigen | Apparaatbeveiliging en toegangscontrole |
+| Pico W manipuleren | Valse meetgegevens versturen | Apparaatidentificatie en validatie |
+| Azure SQL onbevoegd benaderen | Gegevens uitlekken of wijzigen | Beperkte database-toegang |
+| Geheimen lekken via GitHub | Accounts of systemen overnemen | Secrets veilig opslaan |
 
 ## 4. Beveiligingseisen
 
@@ -48,17 +60,19 @@ Sensoren / RFID
 - Geen API-sleutels of wachtwoorden in Git.
 - Invoer valideren.
 - Belangrijke gebeurtenissen loggen.
+- Database alleen toegankelijk maken via de MITM API.
+- Pico devices niet rechtstreeks toegang geven tot de cloud.
 
 ## 5. Nog te bepalen
 
-- Welke ESP32 en sensoren gebruiken we?
-- Welke RFID-technologie kiezen we?
-- Welke backend en database gebruiken we?
-- Hoe beveiligen we de communicatie?
+- Hoe beveiligen we de lokale communicatie tussen de Pico devices en de Raspberry Pi?
+- Hoe identificeren we afzonderlijke apparaten?
+- Welke toegangscontroletechnologie gebruiken we?
+- Hoe beveiligen we de communicatie met de MITM API?
 - Wat gebeurt er bij netwerkuitval?
 
 ## 6. Conclusie
 
-De belangrijkste aandachtspunten zijn toegangscontrole, netwerkbeveiliging, API-beveiliging en fysieke beveiliging van de ESP32.
+De belangrijkste aandachtspunten zijn toegangscontrole, netwerkbeveiliging, API-beveiliging en de fysieke beveiliging van de Raspberry Pi en Pico devices.
 
 > Dit document wordt bijgewerkt zodra de technische architectuur definitief is.

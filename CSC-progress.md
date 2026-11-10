@@ -1,4 +1,4 @@
-- [x] MSSQL database op azure
-- [x] SQL db in orde
-- [ ] MITM server gecodeerd.
-- [ ] MITM server up
+- [x] MSSQL database op Azure
+- [x] SQL database in orde
+- [ ] MITM API gecodeerd (Cloudflare Worker)
+- [x] MITM API online
