@@ -27,6 +27,8 @@ Het systeem is ontworpen om ongewenste toegang te detecteren, een alarm te activ
 
 De technische implementatie en functionaliteiten kunnen gedurende de ontwikkeling veranderen.
 
+# namen
+- Esper
 ## Duurzame ontwikkelingsdoelen
 
 - **SDG 9 - Industrie, innovatie en infrastructuur:** Ontwikkeling van innovatieve en betrouwbare beveiligingstechnologie.
