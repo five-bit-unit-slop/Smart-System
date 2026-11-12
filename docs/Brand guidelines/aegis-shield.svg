@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">AEGIS</title>
+  <desc id="desc">A muted blue shield on a dark navy background.</desc>
+
+  <rect width="512" height="512" fill="#0B1020"/>
+
+  <path
+    fill="#345A9B"
+    d="M256 0
+       C247 0 241 12 223 27
+       C173 70 111 84 57 96
+       C50 98 46 104 46 112
+       V218
+       C46 350 125 454 249 510
+       C254 512 258 512 263 510
+       C387 454 466 350 466 218
+       V112
+       C466 104 462 98 455 96
+       C401 84 339 70 289 27
+       C271 12 265 0 256 0Z"/>
+
+</svg>
