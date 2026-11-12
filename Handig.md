@@ -6,10 +6,13 @@
 
 Blueprint maker
 
+## info van docent:
+
 matter over thread
+
 thread network
-loga
-lora
+
+~~loga/lora~~ not viable, requires extra equipment.
 
 zero trust
 
