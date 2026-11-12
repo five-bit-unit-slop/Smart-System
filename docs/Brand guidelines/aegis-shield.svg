@@ -1,8 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
   <title id="title">AEGIS</title>
-  <desc id="desc">A muted blue shield on a dark navy background.</desc>
+  <desc id="desc">A muted blue shield with a transparent background.</desc>
 
-  <rect width="512" height="512" fill="#0B1020"/>
 
   <path
     fill="#345A9B"
