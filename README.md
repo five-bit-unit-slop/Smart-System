@@ -30,6 +30,9 @@ De technische implementatie en functionaliteiten kunnen gedurende de ontwikkelin
 # namen
 - Esper
 - Ivar
+- Raosbin
+- Dyako
+- Midas
 ## Duurzame ontwikkelingsdoelen
 
 - **SDG 9 - Industrie, innovatie en infrastructuur:** Ontwikkeling van innovatieve en betrouwbare beveiligingstechnologie.
