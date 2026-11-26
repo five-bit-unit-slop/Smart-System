@@ -13,12 +13,13 @@ Smart-System/              # Documentatie (deze repository)
 ├── docs/                  # Technische documentatie, beveiliging, branding
 ├── TKinter-application/   # Desktop GUI (Python + Tkinter + Azure theme)
 ├── DMZ/                   # Raspberry Pi gateway (Flask)
-└── MITM-server-rewrite/   # Cloudflare Worker (TypeScript/Node.js)
+├── MITM-server/           # Cloudflare Worker (TypeScript/Node.js) — direct SQL
+└── PICO/                  # Pico W sensor firmware (MicroPython)
 ```
 
 ## Functionaliteiten
 
-- **Bewegingsdetectie:** Detecteren van beweging met behulp van sensoren (PIR, laser module).
+- **Bewegingsdetectie:** Detecteren van beweging met behulp van sensoren (PIR, laser module, LDR).
 - **Toegangscontrole:** Gebruikers identificeren via inlog in de Tkinter-applicatie.
 - **Alarmsysteem:** Hoorbaar en zichtbaar alarm activeren bij ongeautoriseerde toegang (simulatie in prototype).
 - **Bedieningsdashboard:** Het beveiligingssysteem in- en uitschakelen via de Tkinter-applicatie.
@@ -28,15 +29,13 @@ Smart-System/              # Documentatie (deze repository)
 
 | Onderdeel | Technologie | Status |
 |---|---|---|
-| **Sensoren (Pico W)** | Raspberry Pi Pico W, HC-SR501 PIR, HW-493 Laser | Prototype |
+| **Sensoren (Pico W)** | Raspberry Pi Pico W, HC-SR501 PIR, HW-493 Laser, LDR | Prototype |
 | **Lokale gateway (DMZ)** | Raspberry Pi, Flask (Python) | Basale endpoints `/sensor`, `/health` |
-| **MITM API** | Cloudflare Worker, TypeScript/Node.js | `/api/sensor-data`, `/api/get-data`, `/auth`, `/health` |
+| **MITM API** | Cloudflare Worker, TypeScript/Node.js, tedious (SQL driver) | `/api/sensor-data`, `/auth`, `/health`, direct Azure SQL |
 | **Database** | Azure SQL Database | Schema gedefinieerd, migraties in `docs/Backend/DBs/` |
 | **Desktop applicatie** | Python, Tkinter, Azure ttk theme | Inlog, dashboard, simulatie |
 
-*Azure Function (DB Bridge) is verwijderd — MITM verbindt direct met Azure SQL.*
-
-De technische implementatie en functionaliteiten kunnen gedurende de ontwikkeling veranderen.
+*Architectuur vereenvoudigd: MITM verbindt direct met Azure SQL (geen Azure Function).*
 
 ## Teamleden
 
@@ -63,14 +62,13 @@ Pico W devices
       |
       | HTTPS + Bearer token (gateway_token)
       v
- Cloudflare Worker (MITM API)  ◄── /api/sensor-data, /api/get-data, /auth, /health
+ Cloudflare Worker (MITM API)  ◄── /api/sensor-data, /auth, /health
       |
-      | TLS + Managed Identity / SQL auth
+      | TLS + tedious (SQL Server driver)
+      | DB credentials via Cloudflare env vars
       v
  Azure SQL Database
 ```
-
-*Vereenvoudigde architectuur: geen Azure Function tussen MITM en database.*
 
 ## Datamodellen (Azure SQL)
 
@@ -88,7 +86,7 @@ Zie `docs/Backend/DBs/Azure/SQLdb.md` voor het volledige schema.
 
 - **Zero Trust** architectuur: geen component vertrouwt blindelings op een ander.
 - **TLS** voor alle externe communicatie.
-- **Authenticatie:** Bearer tokens voor gateway → MITM, Managed Identity / SQL auth voor MITM → Azure SQL.
+- **Authenticatie:** Bearer tokens voor gateway → MITM, SQL credentials (env vars) voor MITM → Azure SQL.
 - **Geheimen** in Cloudflare Workers environment variables / Azure Key Vault, **nooit in Git**.
 - **Wachtwoorden** gehasht met PBKDF2-HMAC-SHA256 (prototype) / Argon2id (productie).
 - **Invoervalidatie** op alle API-endpoints.
@@ -138,4 +136,5 @@ Zie `docs/security/threat-model.md` en `docs/security/infrastructure-plan.md` vo
 
 - `TKinter-application/README.md` — Desktop app opstarten, inloggen (user/SuperP4ss!), thema
 - `DMZ/README.md` — Flask gateway (`/sensor` POST, `/health` GET)
-- `MITM-server-rewrite/README.md` — Cloudflare Worker endpoints, auth, payload formaat
+- `MITM-server/README.md` — Cloudflare Worker endpoints, auth, payload formaat, direct SQL
+- `PICO/README.md` — Pico W firmware (MicroPython), sensor drivers
