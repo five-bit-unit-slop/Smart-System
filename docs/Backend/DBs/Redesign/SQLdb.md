@@ -16,7 +16,7 @@
 |-------|---------|--------|
 | `gateways` | Raspberry Pi gateways, authentication | **Defined** |
 | `devices` | Pico W devices | **Defined** |
-| `sensors` | Sensors per device | Pending |
+| `sensors` | Sensors per device | **Defined** |
 | `measurements` | Historical sensor readings | Pending |
 | `alerts` | Alert events | Pending |
 | `users` | Tkinter app users | Pending |
@@ -85,12 +85,40 @@ CREATE TABLE devices(
 - `last_seen_at` updated by Worker on successful data receipt
 - `is_active` allows disabling a device without deleting its data
 
-## Sensors (Planned)
+## Sensors
 
 ```sql
--- TODO: Define
--- References devices(id)
+CREATE TABLE sensors(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    device_id UUID NOT NULL REFERENCES devices(id),
+    name VARCHAR(255) NOT NULL,
+    sensor_type VARCHAR(255) NOT NULL,
+    unit VARCHAR(20) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    CONSTRAINT uq_sensors_device_name UNIQUE(device_id, name)
+);
 ```
+
+**Columns:**
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | UUID | PK, `DEFAULT gen_random_uuid()` | Unique sensor identifier |
+| `device_id` | UUID | NOT NULL, FK → `devices(id)` | Parent device (Pico W) |
+| `name` | VARCHAR(255) | NOT NULL | Distinguishable name (e.g., "ldr-1", "pir-main") |
+| `sensor_type` | VARCHAR(255) | NOT NULL | Sensor category: `light`, `motion`, `laser`, `draaiknop`, etc. |
+| `unit` | VARCHAR(20) | NOT NULL | Unit of measurement: `lux`, `raw`, `boolean`, `cm`, etc. |
+| `created_at` | TIMESTAMPTZ | NOT NULL, `DEFAULT now()` | Registration timestamp |
+| `is_active` | BOOLEAN | NOT NULL, `DEFAULT true` | Soft disable flag |
+
+**Constraints:**
+- `uq_sensors_device_name` — unique sensor name per device (allows multiple sensors of same type with different names)
+
+**Notes:**
+- `sensor_type` identifies the sensor category (e.g., `light`, `motion`, `laser`, `draaiknop`)
+- `name` allows multiple sensors of the same type to have distinguishable names
+- A device can have multiple sensors; each sensor belongs to exactly one device
 
 ## Measurements (Planned)
 

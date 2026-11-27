@@ -32,20 +32,20 @@ CREATE INDEX idx_devices_gateway ON devices(gateway_id);
 CREATE INDEX idx_devices_active ON devices(id) WHERE is_active = true;
 
 -- ============================================================
--- SENSORS (TODO)
+-- SENSORS
 -- ============================================================
--- CREATE TABLE sensors(
---     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
---     device_id UUID NOT NULL REFERENCES devices(id),
---     key VARCHAR(50) NOT NULL,
---     name VARCHAR(255) NOT NULL,
---     type VARCHAR(50) NOT NULL,
---     unit VARCHAR(20) NOT NULL,
---     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
---     is_active BOOLEAN NOT NULL DEFAULT true,
---     CONSTRAINT uq_sensors_device_key UNIQUE(device_id, key)
--- );
--- CREATE INDEX idx_sensors_device ON sensors(device_id);
+CREATE TABLE sensors(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    device_id UUID NOT NULL REFERENCES devices(id),
+    name VARCHAR(255) NOT NULL,
+    sensor_type VARCHAR(255) NOT NULL,
+    unit VARCHAR(20) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    CONSTRAINT uq_sensors_device_name UNIQUE(device_id, name)
+);
+CREATE INDEX idx_sensors_device ON sensors(device_id);
+CREATE INDEX idx_sensors_active ON sensors(id) WHERE is_active = true;
 
 -- ============================================================
 -- MEASUREMENTS (TODO)
