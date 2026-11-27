@@ -2,36 +2,41 @@
 
 ## Backend & Database
 
-- [x] MSSQL database op Azure aangemaakt
-- [x] SQL database schema gedefinieerd (`docs/Backend/DBs/Azure/SQLdb.md`)
-- [x] D1 migratie voor `processed_requests` tabel (`docs/Backend/DBs/D1/0001_initial.sql`)
-- [x] MITM direct verbinding met Azure SQL via tedious (Node.js SQL Server driver)
+- [x] TiDB Cloud database aangemaakt (Serverless tier, PostgreSQL-compatibel, public preview)
+- [x] Database schema gedefinieerd voor PostgreSQL (`docs/Backend/DBs/TiDB/SQLdb.md`)
+- [x] DDL queries voor PostgreSQL (`docs/Backend/DBs/TiDB/query.sql`)
+- [ ] Schema gedeployed naar TiDB Cloud (via Hyperdrive)
+- [x] D1 migratie `processed_requests` vervallen — deduplicatie via unieke `request_id` constraint op `measurements`
 
 ## MITM API (Cloudflare Worker — MITM-server/)
 
 - [x] MITM API online (gedeployed op Cloudflare Workers)
-- [x] Endpoint `POST /api/sensor-data` — ontvangt metingen van DMZ gateway
-- [x] Endpoint `GET /health` — healthcheck
-- [x] Endpoint `POST /auth` — gateway authenticatie (JWT/token validatie)
-- [x] Bearer token validatie (gateway_token)
-- [x] Directe database operaties via tedious (geen Azure Function forwarding)
-- [x] Request validatie (JSON parsing, required fields)
-- [ ] Deduplicatie via `request_id` (vergevergelijking met `processed_requests` tabel)
-- [ ] Rate limiting / abuse prevention
-- [ ] Uitgebreide logging & monitoring
-- [ ] Connection pooling voor tedious
+- [x] Endpoint `POST /api/sensor-data` — ontvangt requests, HTTP 200 (**insert nog niet geïmplementeerd**)
+- [x] Endpoint `GET /health` — healthcheck met DB connectivity via Hyperdrive, HTTP 200
+- [x] Endpoint `POST /auth` — ontvangt requests, HTTP 200 (**JWT validatie: non-empty Bearer token check**)
+- [x] `pg` (node-postgres) driver geïntegreerd en werkend via Hyperdrive
+- [x] Hyperdrive binding geconfigureerd (productie) + `localConnectionString` (lokaal, in `wrangler.toml`)
+- [ ] Request validatie (Zod schemas voor alle endpoints)
+- [ ] Deduplicatie via unieke `request_id` constraint (database-level, schema gedefinieerd)
+- [ ] Rate limiting op `/api/sensor-data` en `/auth`
+- [ ] Uitgebreide structured logging & monitoring (Cloudflare Logs)
+- [ ] Transacties voor measurement + alert inserts
+- [ ] Sensor-data insertie in `measurements` tabel implementeren
+- [ ] JWT validatie implementeren (nu: non-empty Bearer token check)
 
 ## DMZ Gateway (Raspberry Pi — DMZ/)
 
 - [x] Flask server met endpoints:
-  - `POST /sensor` — ontvangt JSON van Pico W devices
+  - `POST /sensor` — ontvangt JSON van Pico W devices (fallback pad)
   - `GET /health` — healthcheck
-- [ ] Authenticatie van Pico W devices (lokaal netwerk)
-- [ ] Forwarding naar MITM API (`/api/sensor-data` met Bearer token)
-- [ ] Lokale SQLite buffer voor offline buffering
+  - `POST /alarm` — lokaal alarm activeren/deactiveren
+- [ ] Authenticatie van Pico W devices (lokaal netwerk — optioneel pad)
+- [ ] Forwarding naar MITM API (`/api/sensor-data` met Bearer token) voor buffered data
+- [ ] Lokale SQLite buffer voor offline buffering (`measurements_queue` tabel)
 - [ ] Automatische synchronisatie na herstel verbinding
 - [ ] systemd service configuratie voor auto-start/herstart
 - [ ] Healthcheck endpoint monitoring
+- [ ] Lokaal alarm hardware integratie (buzzer, LED)
 
 ## Tkinter Desktop Applicatie (TKinter-application/)
 
@@ -48,22 +53,25 @@
 
 - [x] Pico W basiscommunicatie (LAN test met `socket.sendto`)
 - [x] Sensor modules: HC-SR501 PIR, HW-493 Laser, LDR
-- [ ] Definitief lokaal protocol (HTTP vs MQTT vs WebSocket)
-- [ ] Device provisioning / onboarding flow
-- [ ] Fysieke alarm hardware (buzzer, LEDs)
-- [ ] Toegangscontrole hardware (RFID/keypad)
+- [ ] WiFi configuratie en HTTPS client voor directe Worker communicatie
+- [ ] JWT handling op Pico W (token refresh, secure storage)
+- [ ] Device provisioning / onboarding flow (QR code? unieke secret?)
+- [ ] Definitief protocol: HTTPS/REST naar Worker (primaire route)
+- [ ] Fysieke alarm hardware (buzzer, LEDs) — op DMZ, niet op Pico
+- [ ] Toegangscontrole hardware (RFID/keypad) — op DMZ
 
 ## Beveiliging & Infrastructuur
 
-- [x] Threat model (`docs/security/threat-model.md`)
-- [x] Infrastructure plan (`docs/security/infrastructure-plan.md`)
-- [x] MITM security roadmap 6 fasen (`docs/Backend/MITM/MITM-roadmap.md`) — *te herzien*
-- [ ] SQL credentials via Cloudflare Workers secrets / Azure Key Vault
-- [ ] Private Link / VNet integration voor Azure SQL
-- [ ] Automated backup testen (point-in-time restore)
-- [ ] Monitoring & alerting (uptime, logs, metrics)
+- [x] Threat model (`docs/security/threat-model.md`) — geüpdatet voor TiDB + Hyperdrive
+- [x] Infrastructure plan (`docs/security/infrastructure-plan.md`) — geüpdatet voor TiDB + Hyperdrive
+- [x] MITM security roadmap 6 fasen (`docs/Backend/MITM/MITM-roadmap.md`) — herschreven voor nieuwe architectuur
+- [x] Hyperdrive connection string via Cloudflare Worker binding
+- [x] `localConnectionString` in `wrangler.toml` (lokaal, niet in Git)
+- [ ] TiDB Cloud firewall: alleen Hyperdrive IP-ranges
+- [ ] Automated backup testen (point-in-time restore via TiDB Cloud)
+- [ ] Monitoring & alerting (uptime, logs, metrics, Hyperdrive pool usage)
 
 ---
 
-**Laatste update:** 2026-11-26
-**Volgende milestone:** DMZ gateway volledige integratie met Pico W + MITM API, en Tkinter echte API koppeling.
+**Laatste update:** 2026-11-27
+**Volgende milestone:** Sensor-data insertie implementeren, JWT validatie, database schema deployen, Pico W WiFi → Worker integratie testen.

@@ -6,73 +6,79 @@
 ## 1. Systeemarchitectuur
 
 ```text
-Pico W devices
+Pico W devices (WiFi)
       |
-  Local network
+      | HTTPS + JWT
+      v
+Cloudflare Worker (MITM API)
       |
- Raspberry Pi
-     (DMZ)
-      |
-     HTTPS
-      |
- Cloudflare Worker
-   (MITM API)
-      |
-  Azure SQL Database
+      | Hyperdrive (connection pooling)
+      | pg (node-postgres)
+      v
+TiDB Cloud (PostgreSQL-compatibel, public preview)
 
 Tkinter application
       |
-     HTTPS
+      | HTTPS + JWT
+      v
+Cloudflare Worker
+
+Raspberry Pi (DMZ) — fallback gateway
       |
- Cloudflare Worker
+      | HTTPS + Bearer token (buffered data sync)
+      v
+Cloudflare Worker
 ```
 
 ## 2. Te beschermen onderdelen
 
 - Pico W devices en firmware
-- Raspberry Pi (DMZ)
-- Gebruikersaccounts
-- Toegangsgegevens
-- MITM API
-- Azure SQL Database
+- Raspberry Pi (DMZ) — fysieke toegang + lokale opslag
+- Gebruikersaccounts (Tkinter)
+- Toegangsgegevens (JWT secrets, Hyperdrive connection string)
+- MITM API (Cloudflare Worker)
+- TiDB Cloud database
 - Netwerkcommunicatie
-- Alarmsysteem
+- Alarmsysteem (lokaal op DMZ)
 
 ## 3. Belangrijkste dreigingen
 
 | Dreiging | Gevolg | Maatregel |
 |---|---|---|
-| Tkinter-applicatie hacken | Ongeautoriseerde acties | Authenticatie en autorisatie |
-| Netwerkverkeer onderscheppen | Gegevens uitlekken of wijzigen | TLS |
-| Toegangsgegevens kopiëren | Ongewenste toegang | Veilige opslag van toegangsgegevens |
-| MITM API misbruiken | Systeem of gegevens manipuleren | Authenticatie en autorisatie |
-| Raspberry Pi manipuleren | Beveiliging omzeilen of gegevens wijzigen | Apparaatbeveiliging en toegangscontrole |
-| Pico W manipuleren | Valse meetgegevens versturen | Apparaatidentificatie en validatie |
-| Azure SQL onbevoegd benaderen | Gegevens uitlekken of wijzigen | Beperkte database-toegang |
-| Geheimen lekken via GitHub | Accounts of systemen overnemen | Secrets veilig opslaan |
+| Tkinter-applicatie hacken | Ongeautoriseerde acties | Authenticatie (Argon2id) + JWT + rol-gebaseerde autorisatie |
+| Netwerkverkeer onderscheppen | Gegevens uitlekken of wijzigen | TLS 1.2+ overal (Cloudflare edge, Hyperdrive, TiDB) |
+| Toegangsgegevens kopiëren | Ongewenste toegang | Secrets in Cloudflare Workers env vars; geen credentials in code/Git |
+| MITM API misbruiken | Systeem of gegevens manipuleren | JWT validatie (nog niet geïmplementeerd, nu non-empty Bearer check), rate limiting (nog niet), invoervalidatie (nog niet) |
+| Raspberry Pi manipuleren | Lokaal alarm uitschakelen, buffer lezen | Fysieke beveiliging, schijfversleuteling, `systemd` hardening |
+| Pico W manipuleren | Valse meetgegevens versturen | Device-scoped JWT (nog niet), request_id deduplicatie (schema gedefinieerd), plausibiliteitschecks (nog niet) |
+| TiDB onbevoegd benaderen | Gegevens uitlekken of wijzigen | Alleen Worker heeft DB-toegang via Hyperdrive; least-privilege DB user |
+| Geheimen lekken via GitHub | Accounts of systemen overnemen | `wrangler.toml` met `localConnectionString` niet in Git; secrets via dashboard |
+| Hyperdrive connection string lekken | Database toegang | Alleen Worker secret; geen logs van connection string |
 
 ## 4. Beveiligingseisen
 
-- Authenticatie voor gebruikers.
-- Autorisatie voor beveiligingsacties.
-- Versleutelde netwerkcommunicatie.
-- Veilige opslag van wachtwoorden.
-- Geen API-sleutels of wachtwoorden in Git.
-- Invoer valideren.
-- Belangrijke gebeurtenissen loggen.
-- Database alleen toegankelijk maken via de MITM API.
-- Pico devices niet rechtstreeks toegang geven tot de cloud.
+- Authenticatie voor alle clients (Pico W: JWT — **nog niet geïmplementeerd**; DMZ: Bearer token — **non-empty check**; Tkinter: user/pass → JWT — **nog niet**).
+- Autorisatie voor beveiligingsacties (Admin/User rollen) — **nog niet**.
+- Versleutelde netwerkcommunicatie (TLS end-to-end) — **geïmplementeerd** (Cloudflare edge, Hyperdrive, TiDB).
+- Veilige opslag van wachtwoorden (Argon2id) — **in Tkinter (PBKDF2), Worker nog niet**.
+- Geen API-sleutels, wachtwoorden, connection strings in Git — **geïmplementeerd** (Hyperdrive binding, `localConnectionString` lokaal).
+- Invoervalidatie op alle API-endpoints (Zod schemas) — **nog niet geïmplementeerd**.
+- Belangrijke gebeurtenissen loggen (structured JSON, Cloudflare Logs) — **nog niet**.
+- Database **alleen** toegankelijk via Worker; Pico W, DMZ, Tkinter hebben **geen** DB credentials — **geïmplementeerd**.
+- Pico W devices authenticeren niet bij database; enkel via Worker — **geïmplementeerd**.
+- Deduplicatie via unieke `request_id` constraint in database — **schema gedefinieerd, nog niet getest**.
+- Rate limiting op publieke endpoints — **nog niet geïmplementeerd**.
 
 ## 5. Nog te bepalen
 
-- Hoe beveiligen we de lokale communicatie tussen de Pico devices en de Raspberry Pi?
-- Hoe identificeren we afzonderlijke apparaten?
-- Welke toegangscontroletechnologie gebruiken we?
-- Hoe beveiligen we de communicatie met de MITM API?
-- Wat gebeurt er bij netwerkuitval?
+- Hoe beveiligen we de optionele lokale communicatie tussen Pico W en DMZ? (mTLS, PSK, of geen?)
+- Hoe identificeren we afzonderlijke Pico W apparaten bij onboarding? (device certificate? QR code? unieke secret?)
+- Welke toegangscontroletechnologie gebruiken we? (RFID/keypad/pincode)
+- Hoe handelen we key rotation voor JWT secrets en Hyperdrive connection string?
+- Wat gebeurt er bij netwerkuitval? (DMZ buffering, lokaal alarm blijft werken)
 
 ## 6. Conclusie
 
-De belangrijkste aandachtspunten zijn toegangscontrole, netwerkbeveiliging, API-beveiliging en de fysieke beveiliging van de Raspberry Pi en Pico devices.
+De belangrijkste aandachtspunten zijn: JWT-beheer voor Pico W devices, Hyperdrive connection string beveiliging, fysieke beveiliging van de DMZ, en validatie van TiDB's PostgreSQL-compatibiliteit (public preview).
 
 > Dit document wordt bijgewerkt zodra de technische architectuur definitief is.
