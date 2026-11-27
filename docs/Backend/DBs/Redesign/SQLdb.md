@@ -15,7 +15,7 @@
 | Table | Purpose | Status |
 |-------|---------|--------|
 | `gateways` | Raspberry Pi gateways, authentication | **Defined** |
-| `devices` | Pico W devices | Pending |
+| `devices` | Pico W devices | **Defined** |
 | `sensors` | Sensors per device | Pending |
 | `measurements` | Historical sensor readings | Pending |
 | `alerts` | Alert events | Pending |
@@ -55,12 +55,35 @@ CREATE TABLE gateways(
 
 ---
 
-## Devices (Planned)
+## Devices
 
 ```sql
--- TODO: Define
--- References gateways(id)
+CREATE TABLE devices(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    gateway_id UUID NOT NULL REFERENCES gateways(id),
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_seen_at TIMESTAMPTZ,
+    is_active BOOLEAN NOT NULL DEFAULT true
+);
 ```
+
+**Columns:**
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | UUID | PK, `DEFAULT gen_random_uuid()` | Unique device identifier |
+| `gateway_id` | UUID | NOT NULL, FK → `gateways(id)` | Parent gateway |
+| `name` | VARCHAR(255) | NOT NULL | Human-readable device name (e.g., "pico-front-door") |
+| `created_at` | TIMESTAMPTZ | NOT NULL, `DEFAULT now()` | Registration timestamp |
+| `last_seen_at` | TIMESTAMPTZ | NULL | Last contact timestamp |
+| `is_active` | BOOLEAN | NOT NULL, `DEFAULT true` | Soft disable flag |
+
+**Notes:**
+- Represents Pico W sensor nodes
+- `gateway_id` links to the Raspberry Pi gateway managing this device
+- `last_seen_at` updated by Worker on successful data receipt
+- `is_active` allows disabling a device without deleting its data
 
 ## Sensors (Planned)
 

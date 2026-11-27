@@ -18,17 +18,18 @@ CREATE INDEX idx_gateways_active ON gateways(id) WHERE is_active = true;
 CREATE INDEX idx_gateways_last_seen ON gateways(last_seen_at DESC);
 
 -- ============================================================
--- DEVICES (TODO)
+-- DEVICES
 -- ============================================================
--- CREATE TABLE devices(
---     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
---     gateway_id UUID NOT NULL REFERENCES gateways(id),
---     name VARCHAR(255) NOT NULL,
---     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
---     last_seen_at TIMESTAMPTZ,
---     is_active BOOLEAN NOT NULL DEFAULT true
--- );
--- CREATE INDEX idx_devices_gateway ON devices(gateway_id);
+CREATE TABLE devices(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    gateway_id UUID NOT NULL REFERENCES gateways(id),
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_seen_at TIMESTAMPTZ,
+    is_active BOOLEAN NOT NULL DEFAULT true
+);
+CREATE INDEX idx_devices_gateway ON devices(gateway_id);
+CREATE INDEX idx_devices_active ON devices(id) WHERE is_active = true;
 
 -- ============================================================
 -- SENSORS (TODO)
