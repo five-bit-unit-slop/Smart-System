@@ -18,8 +18,8 @@
 | `devices` | Registered Pico W boards | **Created** |
 | `sensors` | Physical sensors connected to Pico W boards | **Created** |
 | `measurements` | Historical sensor readings | **Created** |
-| `alerts` | Security events and detected suspicious activity | **Next** |
-| `users` | Application accounts and authentication | **Defined** |
+| `alerts` | Security events and detected suspicious activity | **Created** |
+| `users` | Application accounts and authentication | **Created** |
 | `api_keys` | API keys for device/gateway auth | Pending |
 
 ---

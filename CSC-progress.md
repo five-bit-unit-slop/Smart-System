@@ -6,9 +6,9 @@
 ## Backend & Database
 
 - [x] Doc TiDB Cloud database aangemaakt (Serverless tier, PostgreSQL-compatibel, public preview)
-- [x] Doc **Nieuw schema gedefinieerd** (`docs/Backend/DBs/Redesign/`) — gateways, devices, sensors, measurements **defined**; alerts **next**; users, api_keys **pending**
+- [x] Doc **Nieuw schema gedefinieerd** (`docs/Backend/DBs/Redesign/`) — all 6 tables defined
 - [x] Doc Oude TiDB/Azure/D1 schemas gemarkeerd als verouderd
-- [ ] Code Nieuw schema deployen naar TiDB Cloud (via Hyperdrive)
+- [x] Code Nieuw schema gedeployed naar TiDB Cloud (via Hyperdrive) — 6 tabellen aangemaakt
 - [x] Doc D1 migratie `processed_requests` vervallen — deduplicatie via unieke `request_id` constraint op `measurements`
 
 ## MITM API (Cloudflare Worker — repo: `smart-system-worker`)

@@ -113,12 +113,12 @@ Zie `docs/Backend/DBs/Redesign/SQLdb.md` voor het volledige schema.
 
 | Tabel | Doel | Status |
 |-------|------|--------|
-| `gateways` | Raspberry Pi gateways, `hash` (SHA-256 token hash) | **Defined** |
-| `devices` | Pico W sensor nodes | **Defined** |
-| `sensors` | Sensors per device (`sensor_type`, `unit`, `name`) | **Defined** |
-| `measurements` | Historical readings, `request_id` unique for deduplication | **Defined** |
-| `alerts` | Security events (`alert_type`, `severity`, `resolved_at`) | **Next** |
-| `users` | Tkinter app users (Argon2id) | **Defined** |
+| `gateways` | Raspberry Pi gateways, `hash` (SHA-256 token hash) | **Created** |
+| `devices` | Pico W sensor nodes | **Created** |
+| `sensors` | Sensors per device (`sensor_type`, `unit`, `name`) | **Created** |
+| `measurements` | Historical readings, `request_id` unique for deduplication | **Created** |
+| `alerts` | Security events (`alert_type`, `severity`, `is_resolved`) | **Created** |
+| `users` | Tkinter app users (Argon2id) | **Created** |
 | `api_keys` | Device/gateway auth keys (JWT issuance) | Pending |
 
 *Oude schemas in `docs/Backend/DBs/TiDB/` en `docs/Backend/DBs/Azure/` zijn **verouderd** maar bewaard voor referentie.*
