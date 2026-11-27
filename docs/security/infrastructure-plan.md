@@ -172,62 +172,99 @@ Maatregelen:
 
 Er moet een betrouwbare back-upstrategie komen die gegevensverlies zoveel mogelijk voorkomt.
 
-### 3.1 Automatische TiDB Cloud-back-ups
+### 3.1 Backupstrategie
 
-TiDB Cloud Serverless beschikt over automatisch beheerde back-ups.
+De primaire database (TiDB Cloud Serverless) wordt dagelijks om 07:00 uur (UTC+1) automatisch geback-upt door TiDB Cloud. Er worden zeven dagelijkse momentopnamen bewaard. De back-ups omvatten een volledige snapshot van de databasecluseter en ondersteunen point-in-time recovery (PITR) binnen de bewaartermijn.
 
-Aandachtspunten:
-- TiDB Cloud verzorgt automatisch snapshot back-ups en point-in-time recovery.
-- Point-in-time restore gebruiken om een database naar een eerder tijdstip terug te zetten.
-- De ingestelde bewaartermijn controleren (standaard 7 dagen op gratis tier, langer op betaalde tiers).
-- Voorgestelde bewaartermijn: 7-30 dagen afhankelijk van tier.
-- Long-term retention: handmatige exports naar R2/S3 overwegen voor compliance.
+De back-upplanning wordt volledig beheerd door TiDB Cloud. Er is geen handmatige planning of scriptvereiste vanuit de applicatie.
 
-De back-upplanning wordt door TiDB Cloud beheerd.
+### 3.2 Rotatiebeleid
 
-### 3.2 Externe back-upkopieën
+Er worden maximaal zeven dagelijkse back-upversies bewaard. Zodra een nieuwe dagelijkse back-up wordt aangemaakt, vervalt de oudste versie (die ouder is dan zeven dagen) en wordt deze automatisch verwijderd door TiDB Cloud. Er is geen handmatige ingreep nodig voor deze rotatie.
 
-Naast de beheerde TiDB-back-ups kan een onafhankelijke extra kopie worden bewaard.
+De effectieve bewaartermijn is daarmee zeven kalenderdagen. Binnen deze termijn is herstel naar elk willekeurig moment (point-in-time recovery) mogelijk.
 
-Aandachtspunten:
-- Regelmatig een aanvullende database-export maken (via `pg_dump` over Hyperdrive).
-- Back-upbestanden buiten de primaire databaseopslag bewaren (Cloudflare R2 of vergelijkbaar).
-- Back-ups versleuteld opslaan.
-- Toegang tot back-ups beperken.
-- Meerdere versies bewaren.
+### 3.3 Herstelprocedure
+
+Herstel van de database vanuit een back-up verloopt als volgt:
+
+1. **Identificeer het hersteltijdstip** — bepaal op basis van incidentanalyse naar welk moment (datum/tijd, UTC+1) de database moet worden teruggezet.
+2. **Controleer beschikbaarheid** — verifieer in de TiDB Cloud console of het gewenste tijdstip binnen de zeven-daagse bewaartermijn valt.
+3. **Start herstel** — initieer een point-in-time restore via de TiDB Cloud console of API. Dit creeëert een nieuwe databasecluster met de data zoals die op het gekozen moment bestond.
+3. **Valideer herstel** — controleer of tabellen, relaties, constraints en data correct zijn hersteld (voorbeeldqueries, row counts, constraint checks).
+4. **Switch over** — pas de Hyperdrive-binding en eventuele connection strings aan naar het nieuwe cluster. Update DNS indien nodig.
+5. **Communiceer** — informeer stakeholders over voltooiing en eventuele gegevensverlies (zie RPO).
+
+Let op: herstel overschrijft de huidige database niet direct; TiDB Cloud creëert een nieuw cluster. De switch moet expliciet worden uitgevoerd.
+
+### 3.4 RPO en RTO
+
+**Recovery Point Objective (RPO):** maximaal 24 uur. Omdat back-ups één keer per dag (07:00 UTC+1) worden gemaakt, kunnen gegevens die na de laatste back-up zijn geschreven, verloren gaan bij een storing. Er is geen continue replicatie of meermaals-per-dag back-up geconfigureerd.
+
+**Recovery Time Objective (RTO):** niet formeel vastgelegd. De duur van een point-in-time restore hangt af van de databasegrootte en de belasting op TiDB Cloud. In de praktijk kan dit variëren van minuten tot uren. Een concrete garantie wordt niet gegeven.
+
+Deze waarden zijn indicatief en gebaseerd op de standaard TiDB Cloud Serverless functionaliteit. Formele RPO/RTO-doelen zijn nog niet goedgekeurd door de opdrachtgever.
+
+### 3.5 Beveiliging van back-ups
+
+- **Toegangsbeheer:** alle back-ups worden beheerd binnen de TiDB Cloud-omgeving. Toegang tot de console en API is beperkt tot gemachtigde personen (MFA-verplicht, least privilege).
+- **Opslagbeveiliging:** back-updata wordt door TiDB Cloud versleuteld at-rest (AES-256) en in transit (TLS 1.2+). De opslaglocatie wordt bepaald door TiDB Cloud (regionaal, overeenkomend met de gekozen database-regio).
+- **Bescherming tegen ongeautoriseerde verwijdering:** back-ups binnen de bewaartermijn kunnen niet handmatig worden verwijderd via de console zonder expliciete bevestiging en bevoegdheden. De automatische rotatie na zeven dagen is de enige verwijderingsmechanisme.
+- **Audittrail:** alle herstelacties en console-toegang worden gelogd door TiDB Cloud.
+
+Deze beveiligingsmaatregelen worden geboden door het TiDB Cloud-platform. Aanvullende maatregelen (bijv. cross-region copy, immutable storage) zijn niet geconfigureerd.
+
+### 3.6 Externe back-upkopieën (aanbeveling)
+
+Naast de beheerde TiDB-back-ups kan een onafhankelijke extra kopie worden bewaard als aanvullende bescherming:
+
+- Regelmatig een database-export maken (via `pg_dump` over Hyperdrive).
+- Back-upbestanden buiten de primaire databaseopslag bewaren (bijv. Cloudflare R2).
+- Back-ups versleuteld opslaan (bijv. SSE-S3 of client-side encryptie).
+- Toegang tot back-ups beperken (IAM policies, signed URLs).
+- Meerdere versies bewaren (minimaal één extra kopie per week).
 - Back-ups niet uitsluitend op de Raspberry Pi bewaren.
 
-Deze extra kopieën zijn bedoeld als aanvullende bescherming en niet als vervanging van de automatische TiDB-back-ups.
+Deze extra kopieën zijn bedoeld als aanvullende bescherming en niet als vervanging van de automatische TiDB-back-ups. De implementatie hiervan is nog niet gerealiseerd.
 
-### 3.3 Bewaartermijn
+### 3.7 Bewaartermijnoverzicht
 
-Voorgestelde bewaartermijnen:
-- Point-in-time herstel: 7-30 dagen, afhankelijk van het gekozen TiDB tier.
-- Aanvullende exports: 30 dagen.
-- Belangrijke historische back-ups eventueel langer bewaren via R2.
+| Back-uptype | Frequentie | Bewaartermijn | Beheer |
+|-------------|------------|---------------|--------|
+| TiDB Cloud snapshot + PITR | Dagelijks 07:00 UTC+1 | 7 dagen | Automatisch (TiDB Cloud) |
+| Externe `pg_dump` exports (aanbevolen) | Wekelijks (nog te implementeren) | 4 weken (voorstel) | Handmatig / script |
 
-### 3.4 Hersteltesten
+### 3.8 Beperkingen en risico's
 
-Back-ups moeten daadwerkelijk getest worden.
+- **Meerdere onbruikbare back-ups:** als meerdere opeenvolgende dagelijkse back-ups corrupt of incompleet zijn (bijv. door een onopgemerkte databasecorruptie die al dagen lang bestaat), kan herstel onmogelijk worden binnen de zeven-daagse termijn. Een externaal export-bestand (zie 3.6) mitigeert dit risico.
+- **Storing langer dan zeven dagen:** als een onopgemerkte storing of corruptie langer dan zeven dagen onopgemerkt blijft, vallen alle geldige back-ups buiten de bewaartermijn. Herstel is dan niet meer mogelijk via de standaard TiDB-back-ups. Een externe back-upkopie (zie 3.6) is de enige redmiddel.
+- **Geen continue replicatie:** bij uitval van de primaire regio tussen twee back-ups (tussen 07:00 en 07:00 de volgende dag) gaat maximaal 24 uur aan transacties verloren.
+- **Geen cross-region back-up:** back-ups worden in dezelfde regio opgeslagen als de primaire database. Bij een regionale storing zijn zowel primaire database als back-ups onbereikbaar.
+- **Single-vendor afhankelijkheid:** back-upbeheer is volledig afhankelijk van TiDB Cloud. Er is geen tweede, onafhankelijke back-updoel geconfigureerd.
 
-Aandachtspunten:
-- Regelmatig een database herstellen in een aparte testomgeving (TiDB branching of nieuwe cluster).
-- Controleren of tabellen, relaties en gegevens correct zijn hersteld.
-- Herstelprocedure documenteren.
-- Bijhouden wanneer de laatste succesvolle hersteltest is uitgevoerd.
+### 3.9 Verificatie door hersteltesten
 
-### 3.5 Raspberry Pi-back-ups
+Periodieke hersteltesten zijn essentieel om te verifiëren dat back-ups daadwerkelijk bruikbaar zijn en de herstelprocedure werkt:
+
+- **Frequentie:** minimaal één keer per kwartaal (aanbevolen maandelijks).
+- **Scope:** volledige point-in-time restore naar een testcluster (TiDB branching of nieuwe cluster), gevolgd door datavalidatie (row counts, constraint checks, voorbeeldqueries).
+- **Documentatie:** herstelprocedure, uitvoeringstijd, gevonden afwijkingen en actiepunten vastleggen in een herstellog.
+- **Verantwoordelijkheid:** uitvoering door databasebeheerder of backend-ontwikkelaar; resultaat bespreken in sprintreview of incidentreview.
+
+Zonder regelmatige tests is er geen zekerheid dat back-ups compleet, consistent en tijdig herstelbaar zijn. Een back-up die niet getest is, is een onbekende risico.
+
+### 3.10 Raspberry Pi-back-ups
 
 De lokale Raspberry Pi-opslag valt niet automatisch onder de TiDB Cloud-back-ups.
 
-Daarom moeten ook de volgende onderdelen worden meegenomen:
-- SQLite-wachtrij, indien gebruikt.
+Daarom moeten ook de volgende onderdelen worden meegenomen in een afzonderlijk back-upbeleid:
+- SQLite-wachtrij (`measurements_queue`), indien gebruikt.
 - Gatewayconfiguratie.
 - Benodigde configuratiebestanden.
 - Serviceconfiguratie (`systemd` unit files).
 - Eventuele lokale certificaten en sleutels, veilig opgeslagen.
 
-Gevoelige configuratie en secrets moeten apart en versleuteld worden bewaard.
+Gevoelige configuratie en secrets moeten apart en versleuteld worden bewaard. De frequentie en bewaartermijn voor deze back-ups zijn nog vast te stellen.
 
 ## 4. Beschikbaarheid en herstel
 
