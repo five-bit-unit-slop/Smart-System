@@ -2,18 +2,20 @@
 
 This folder contains documentation for the Smart-System project.
 
+> **This is a documentation-only repository.** Implementation code lives in separate repositories (not yet created): `smart-system-tkinter`, `smart-system-dmz`, `smart-system-worker`, `smart-system-pico`.
+
 ## Structure
 
 ```
 docs/
 ├── Backend/
 │   ├── DBs/
-│   │   ├── Redesign/       # Nieuwe schema (actueel)
+│   │   ├── Redesign/       # Current schema (source of truth)
 │   │   │   ├── SQLdb.md    # Database design (PostgreSQL syntax)
 │   │   │   └── query.sql   # DDL statements
-│   │   ├── TiDB/           # Verouderd: TiDB Cloud schema — voor referentie
-│   │   ├── Azure/          # Verouderd: Azure SQL (T-SQL) — voor referentie
-│   │   └── D1/             # Verouderd: Cloudflare D1 migratie
+│   │   ├── TiDB/           # Obsolete: TiDB Cloud schema — for reference
+│   │   ├── Azure/          # Obsolete: Azure SQL (T-SQL) — for reference
+│   │   └── D1/             # Obsolete: Cloudflare D1 migration
 │   ├── MITM/
 │   │   ├── MITM.md         # MITM server design (pg + Hyperdrive)
 │   │   └── MITM-roadmap.md # Security roadmap
@@ -23,32 +25,32 @@ docs/
 │   └── infrastructure-plan.md # Hosting, back-ups, HA, DR
 ├── TI/
 │   ├── modules.md          # Hardware modules (PIR, laser)
-│   └── webtest.md          # JSON protocol voorbeelden (oude LAN-test)
-├── Brand guidelines/       # Logo's, kleurenpalet
-└── bim/                    # Stakeholderanalyse
+│   └── webtest.md          # JSON protocol examples (old LAN test)
+├── Brand guidelines/       # Logos, color palette
+└── bim/                    # Stakeholder analysis
 ```
 
 ## Key Architecture Decisions
 
-- **Database:** TiDB Cloud (PostgreSQL-compatibel, public preview)
+- **Database:** TiDB Cloud (PostgreSQL-compatible, public preview)
 - **Connection pooling:** Cloudflare Hyperdrive
-- **Backend:** Cloudflare Worker (Node.js HTTP compat) met `pg` driver
+- **Backend:** Cloudflare Worker (Node.js HTTP compat) with `pg` driver
 - **Data flow:** Pico W → Worker → Hyperdrive → TiDB
-- **Zero out-of-pocket cost:** gratis tiers voor Cloudflare Workers, Hyperdrive, TiDB Cloud Serverless
-- **Schema:** Redesign in `docs/Backend/DBs/Redesign/` (oude TiDB/Azure schemas verouderd)
+- **Zero out-of-pocket cost:** free tiers for Cloudflare Workers, Hyperdrive, TiDB Cloud Serverless
+- **Schema:** Redesign in `docs/Backend/DBs/Redesign/` (old TiDB/Azure schemas obsolete)
 
-## Verified Implementation Status
+## Verified Implementation Status (External)
 
-De volgende componenten zijn gedeployed en getest in productie:
+The following is deployed **in a separate Cloudflare Worker** (not in this repo):
 
-- **Cloudflare Worker** — deployed, gebruikt Node.js HTTP compatibility layer (`httpServerHandler`)
-- **`pg` (node-postgres) driver** — geïntegreerd, voert queries uit via Hyperdrive
-- **Cloudflare Hyperdrive binding** — geconfigureerd in productie; `localConnectionString` in `wrangler.toml` voor lokale ontwikkeling
-- **TiDB Cloud connectiviteit** — geverifieerd: `SELECT * FROM pg_tables` werkt, database `postgres`, PostgreSQL compatibility 17.0
-- **Endpoints getest:** `GET /health` (200), `POST /api/sensor-data` (200), `POST /auth` (200)
+- **Cloudflare Worker** — deployed, uses Node.js HTTP compatibility layer (`httpServerHandler`)
+- **`pg` (node-postgres) driver** — integrated, executes queries via Hyperdrive
+- **Cloudflare Hyperdrive binding** — configured in production; `localConnectionString` in `wrangler.toml` for local dev
+- **TiDB Cloud connectivity** — verified: `SELECT * FROM pg_tables` works, database `postgres`, PostgreSQL compatibility 17.0
+- **Endpoints tested:** `GET /health` (200), `POST /api/sensor-data` (200), `POST /auth` (200)
 
-**Nog niet geverifieerd:**
-- Sensor-data insertie in `measurements` tabel (nieuwe schema)
+**Not yet verified:**
+- Sensor-data insertion into `measurements` table (new schema)
 - Complete Pico W → Worker → TiDB pipeline
-- JWT validatie (huidig: alleen non-empty Bearer token check)
-- Nieuwe database schema deployment naar TiDB Cloud
+- JWT validation (currently: non-empty Bearer token check only)
+- New database schema deployment to TiDB Cloud

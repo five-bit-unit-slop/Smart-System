@@ -1,5 +1,7 @@
 # DMZ Raspberry Pi Gateway Design
 
+> **Implementation lives in separate repo:** `smart-system-dmz` (not in this repository). This document describes the design.
+
 ## Role
 
 De Raspberry Pi fungeert als **lokale fallback-gateway** voor alarmverwerking en offline buffering. Sensor data van Pico W devices gaat nu rechtstreeks naar de Cloudflare Worker (via WiFi). De DMZ is niet meer de verplichte tussenlaag voor alle sensor data.

@@ -11,11 +11,9 @@ Het systeem is ontworpen om ongewenste toegang te detecteren, een alarm te activ
 ```
 Smart-System/              # Documentatie (deze repository)
 ├── docs/                  # Technische documentatie, beveiliging, branding
-├── TKinter-application/   # Desktop GUI (Python + Tkinter + Azure theme)
-├── DMZ/                   # Raspberry Pi gateway (Flask) — lokale verwerking & alarm
-├── MITM-server/           # Cloudflare Worker (TypeScript/Node.js) — pg + Hyperdrive
-└── PICO/                  # Pico W sensor firmware (MicroPython)
 ```
+
+> **Let op:** De implementatiecode (Tkinter, DMZ Flask, Cloudflare Worker, Pico W firmware) zit in afzonderlijke repositories of is nog niet aangemaakt. Deze repo bevat alleen documentatie.
 
 ## Functionaliteiten
 
@@ -89,14 +87,17 @@ De Worker gebruikt Cloudflare's Node.js HTTP compatibility layer (`httpServerHan
 
 Zie `docs/Backend/DBs/Redesign/SQLdb.md` voor het volledige schema.
 
-**Tabellen (gepland):**
-- `gateways` — Raspberry Pi-gateways, `hash` (SHA-256 token hash) — **gedefinieerd**
-- `devices` — Pico W-apparaten, gekoppeld aan gateway — *pending*
-- `sensors` — Sensoren per apparaat (`key`, type, unit) — *pending*
-- `measurements` — Historische meetwaarden, `request_id` uniek voor deduplicatie — *pending*
-- `alerts` — Waarschuwingen (info/warning/critical), gekoppeld aan sensor/measurement — *pending*
-- `users` — Tkinter-gebruikers, wachtwoordhash (Argon2id), rol (admin/user) — *pending*
-- `api_keys` — API keys voor device/gateway authenticatie (JWT issuance) — *pending*
+**Tabellen:**
+
+| Tabel | Doel | Status |
+|-------|------|--------|
+| `gateways` | Raspberry Pi gateways, `hash` (SHA-256 token hash) | **Defined** |
+| `devices` | Pico W sensor nodes | **Defined** |
+| `sensors` | Sensors per device (`sensor_type`, `unit`, `name`) | **Defined** |
+| `measurements` | Historical readings, `request_id` unique for deduplication | **Defined** |
+| `alerts` | Security events (`alert_type`, `severity`, `resolved_at`) | **Next** |
+| `users` | Tkinter app users (Argon2id, role) | Pending |
+| `api_keys` | Device/gateway auth keys (JWT issuance) | Pending |
 
 *Oude schemas in `docs/Backend/DBs/TiDB/` en `docs/Backend/DBs/Azure/` zijn **verouderd** maar bewaard voor referentie.*
 
@@ -164,9 +165,11 @@ Zie `docs/security/threat-model.md` en `docs/security/infrastructure-plan.md` vo
 | `docs/Brand guidelines/` | Logo's, kleurenpalet (#0B1020, #7C9DFF, #F2F4F8) |
 | `docs/bim/Stakeholderanalyse_Smart_System.docx` | Stakeholderanalyse |
 
-## Subproject README's
+## Subprojecten (losse repositories, nog aan te maken)
 
-- `TKinter-application/README.md` — Desktop app opstarten, inloggen (user/SuperP4ss!), thema
-- `DMZ/README.md` — Flask gateway (`/sensor` POST, `/health` GET), lokaal alarm & buffering
-- `MITM-server/README.md` — Cloudflare Worker endpoints, auth, payload formaat, `pg` + Hyperdrive
-- `PICO/README.md` — Pico W firmware (MicroPython), sensor drivers, directe Worker communicatie
+| Subproject | Repo (gepland) | Beschrijving |
+|------------|----------------|--------------|
+| Tkinter Desktop App | `smart-system-tkinter` | Python + Tkinter, Azure theme, auth, dashboard |
+| DMZ Gateway | `smart-system-dmz` | Flask op Raspberry Pi, `/sensor`, `/health`, `/alarm`, SQLite buffering |
+| MITM Worker | `smart-system-worker` | Cloudflare Worker, Node.js HTTP compat, `pg` + Hyperdrive |
+| Pico W Firmware | `smart-system-pico` | MicroPython, WiFi, HTTPS → Worker, sensor drivers |

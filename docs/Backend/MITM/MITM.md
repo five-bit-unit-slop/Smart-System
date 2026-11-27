@@ -1,5 +1,7 @@
 # MITM server design
 
+> **Implementation lives in separate repo:** `smart-system-worker` (not in this repository). This document describes the design.
+
 ## Data flow
 
 ```text
