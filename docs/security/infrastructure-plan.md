@@ -214,35 +214,15 @@ Deze waarden zijn indicatief en gebaseerd op de standaard TiDB Cloud Serverless 
 
 Deze beveiligingsmaatregelen worden geboden door het TiDB Cloud-platform. Aanvullende maatregelen (bijv. cross-region copy, immutable storage) zijn niet geconfigureerd.
 
-### 3.6 Externe back-upkopieën (aanbeveling)
+### 3.6 Beperkingen en risico's
 
-Naast de beheerde TiDB-back-ups kan een onafhankelijke extra kopie worden bewaard als aanvullende bescherming:
-
-- Regelmatig een database-export maken (via `pg_dump` over Hyperdrive).
-- Back-upbestanden buiten de primaire databaseopslag bewaren (bijv. Cloudflare R2).
-- Back-ups versleuteld opslaan (bijv. SSE-S3 of client-side encryptie).
-- Toegang tot back-ups beperken (IAM policies, signed URLs).
-- Meerdere versies bewaren (minimaal één extra kopie per week).
-- Back-ups niet uitsluitend op de Raspberry Pi bewaren.
-
-Deze extra kopieën zijn bedoeld als aanvullende bescherming en niet als vervanging van de automatische TiDB-back-ups. De implementatie hiervan is nog niet gerealiseerd.
-
-### 3.7 Bewaartermijnoverzicht
-
-| Back-uptype | Frequentie | Bewaartermijn | Beheer |
-|-------------|------------|---------------|--------|
-| TiDB Cloud snapshot + PITR | Dagelijks 07:00 UTC+1 | 7 dagen | Automatisch (TiDB Cloud) |
-| Externe `pg_dump` exports (aanbevolen) | Wekelijks (nog te implementeren) | 4 weken (voorstel) | Handmatig / script |
-
-### 3.8 Beperkingen en risico's
-
-- **Meerdere onbruikbare back-ups:** als meerdere opeenvolgende dagelijkse back-ups corrupt of incompleet zijn (bijv. door een onopgemerkte databasecorruptie die al dagen lang bestaat), kan herstel onmogelijk worden binnen de zeven-daagse termijn. Een externaal export-bestand (zie 3.6) mitigeert dit risico.
-- **Storing langer dan zeven dagen:** als een onopgemerkte storing of corruptie langer dan zeven dagen onopgemerkt blijft, vallen alle geldige back-ups buiten de bewaartermijn. Herstel is dan niet meer mogelijk via de standaard TiDB-back-ups. Een externe back-upkopie (zie 3.6) is de enige redmiddel.
+- **Meerdere onbruikbare back-ups:** als meerdere opeenvolgende dagelijkse back-ups corrupt of incompleet zijn (bijv. door een onopgemerkte databasecorruptie die al dagen lang bestaat), kan herstel onmogelijk worden binnen de zeven-daagse termijn. Een externe export-bestand kan dit risico mitigeren, maar is niet geïmplementeerd.
+- **Storing langer dan zeven dagen:** als een onopgemerkte storing of corruptie langer dan zeven dagen onopgemerkt blijft, vallen alle geldige back-ups buiten de bewaartermijn. Herstel is dan niet meer mogelijk via de standaard TiDB-back-ups.
 - **Geen continue replicatie:** bij uitval van de primaire regio tussen twee back-ups (tussen 07:00 en 07:00 de volgende dag) gaat maximaal 24 uur aan transacties verloren.
 - **Geen cross-region back-up:** back-ups worden in dezelfde regio opgeslagen als de primaire database. Bij een regionale storing zijn zowel primaire database als back-ups onbereikbaar.
 - **Single-vendor afhankelijkheid:** back-upbeheer is volledig afhankelijk van TiDB Cloud. Er is geen tweede, onafhankelijke back-updoel geconfigureerd.
 
-### 3.9 Verificatie door hersteltesten
+### 3.7 Verificatie door hersteltesten
 
 Periodieke hersteltesten zijn essentieel om te verifiëren dat back-ups daadwerkelijk bruikbaar zijn en de herstelprocedure werkt:
 
@@ -253,7 +233,7 @@ Periodieke hersteltesten zijn essentieel om te verifiëren dat back-ups daadwerk
 
 Zonder regelmatige tests is er geen zekerheid dat back-ups compleet, consistent en tijdig herstelbaar zijn. Een back-up die niet getest is, is een onbekende risico.
 
-### 3.10 Raspberry Pi-back-ups
+### 3.8 Raspberry Pi-back-ups
 
 De lokale Raspberry Pi-opslag valt niet automatisch onder de TiDB Cloud-back-ups.
 
