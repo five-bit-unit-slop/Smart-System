@@ -48,34 +48,35 @@ CREATE INDEX idx_sensors_device ON sensors(device_id);
 CREATE INDEX idx_sensors_active ON sensors(id) WHERE is_active = true;
 
 -- ============================================================
--- MEASUREMENTS (TODO)
+-- MEASUREMENTS
 -- ============================================================
--- CREATE TABLE measurements(
---     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
---     sensor_id UUID NOT NULL REFERENCES sensors(id),
---     request_id UUID NOT NULL UNIQUE,
---     value DECIMAL(10,3) NOT NULL,
---     recorded_at TIMESTAMPTZ NOT NULL,
---     received_at TIMESTAMPTZ NOT NULL DEFAULT now()
--- );
--- CREATE INDEX idx_measurements_sensor_recorded ON measurements(sensor_id, recorded_at DESC);
--- CREATE INDEX idx_measurements_received ON measurements(received_at DESC);
+CREATE TABLE measurements(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sensor_id UUID NOT NULL REFERENCES sensors(id),
+    request_id UUID NOT NULL UNIQUE,
+    value DECIMAL(10,3) NOT NULL,
+    unit VARCHAR(20) NOT NULL,
+    measured_at TIMESTAMPTZ NOT NULL,
+    received_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_measurements_sensor_measured ON measurements(sensor_id, measured_at DESC);
+CREATE INDEX idx_measurements_received ON measurements(received_at DESC);
 
 -- ============================================================
--- ALERTS (TODO)
+-- ALERTS (Next)
 -- ============================================================
--- CREATE TABLE alerts(
---     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
---     sensor_id UUID NOT NULL REFERENCES sensors(id),
---     measurement_id UUID REFERENCES measurements(id),
---     type VARCHAR(50) NOT NULL,
---     message VARCHAR(500) NOT NULL,
---     severity VARCHAR(20) NOT NULL CHECK (severity IN ('info', 'warning', 'critical')),
---     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
---     resolved_at TIMESTAMPTZ
--- );
--- CREATE INDEX idx_alerts_sensor_created ON alerts(sensor_id, created_at DESC);
--- CREATE INDEX idx_alerts_unresolved ON alerts(sensor_id) WHERE resolved_at IS NULL;
+CREATE TABLE alerts(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sensor_id UUID NOT NULL REFERENCES sensors(id),
+    measurement_id UUID REFERENCES measurements(id),
+    alert_type VARCHAR(50) NOT NULL,
+    message VARCHAR(500) NOT NULL,
+    severity VARCHAR(20) NOT NULL CHECK (severity IN ('info', 'warning', 'critical')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    resolved_at TIMESTAMPTZ
+);
+CREATE INDEX idx_alerts_sensor_created ON alerts(sensor_id, created_at DESC);
+CREATE INDEX idx_alerts_unresolved ON alerts(sensor_id) WHERE resolved_at IS NULL;
 
 -- ============================================================
 -- USERS (TODO)
