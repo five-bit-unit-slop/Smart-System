@@ -118,7 +118,7 @@ Zie `docs/Backend/DBs/Redesign/SQLdb.md` voor het volledige schema.
 | `sensors` | Sensors per device (`sensor_type`, `unit`, `name`) | **Defined** |
 | `measurements` | Historical readings, `request_id` unique for deduplication | **Defined** |
 | `alerts` | Security events (`alert_type`, `severity`, `resolved_at`) | **Next** |
-| `users` | Tkinter app users (Argon2id, role) | Pending |
+| `users` | Tkinter app users (Argon2id) | **Defined** |
 | `api_keys` | Device/gateway auth keys (JWT issuance) | Pending |
 
 *Oude schemas in `docs/Backend/DBs/TiDB/` en `docs/Backend/DBs/Azure/` zijn **verouderd** maar bewaard voor referentie.*

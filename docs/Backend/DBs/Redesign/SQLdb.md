@@ -215,7 +215,6 @@ CREATE TABLE users(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     is_active BOOLEAN NOT NULL DEFAULT true
 );
@@ -228,13 +227,11 @@ CREATE TABLE users(
 | `id` | UUID | PK, `DEFAULT gen_random_uuid()` | Unique user identifier |
 | `username` | VARCHAR(255) | NOT NULL, UNIQUE | Login username |
 | `password_hash` | VARCHAR(255) | NOT NULL | Argon2id hash of password |
-| `role` | VARCHAR(20) | NOT NULL, DEFAULT 'user', CHECK | `admin` or `user` |
 | `created_at` | TIMESTAMPTZ | NOT NULL, `DEFAULT now()` | Registration timestamp |
 | `is_active` | BOOLEAN | NOT NULL, `DEFAULT true` | Soft disable flag |
 
 **Notes:**
 - `password_hash` stores Argon2id hash (recommended) or PBKDF2-HMAC-SHA256 (legacy)
-- `role` determines permissions in Tkinter app and Worker API
 - `is_active` allows disabling account without deletion
 
 ## API Keys (Planned)
@@ -257,7 +254,7 @@ CREATE TABLE users(
 | `Sensors` | `sensors` | `sensor_key` → `key`, `sensor_name` → `name`, `sensor_type` → `type` |
 | `Measurements` | `measurements` | `measurement_value` → `value`, `recorded_at` → `recorded_at`, `received_at` → `received_at` |
 | `Alerts` | `alerts` | `alert_type` → `type`, added `device_id` (required), `is_resolved` boolean, `description` text |
-| `Users` | `users` | `password_hash` unchanged, `role` CHECK constraint |
+| `Users` | `users` | `password_hash` unchanged, `role` column removed |
 
 ---
 
