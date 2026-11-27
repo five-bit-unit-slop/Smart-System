@@ -5,20 +5,21 @@
 ## Data flow
 
 ```text
-Pico W (WiFi) → Cloudflare Worker → Hyperdrive → TiDB Cloud
-                    ↑
+Pico W (WiFi) → Cloudflare Worker → Hyperdrive → TiDB Cloud (sensor data)
+                    ↑                      → D1 (identity/auth, binding configured, unused)
               Tkinter app
 ```
 
-De Pico W stuurt sensor data rechtstreeks naar de Cloudflare Worker (geen Raspberry Pi DMZ tussenlaag). De Worker valideert, authenticert en schrijft via Hyperdrive naar TiDB.
+De Pico W stuurt sensor data rechtstreeks naar de Cloudflare Worker (geen Raspberry Pi DMZ tussenlaag). De Worker valideert, authenticert en schrijft sensor data via Hyperdrive naar TiDB. D1 binding voor identity/auth is geconfigureerd maar **nog niet gebruikt in code**.
 
 ## Technical design
 
 - Cloudflare Worker met Node.js HTTP compatibility layer (`httpServerHandler`)
 - JavaScript/TypeScript gemengd
-- Database driver: `pg` (node-postgres) — **geïntegreerd en werkend**
+- Database driver: `pg` (node-postgres) — **geïntegreerd en werkend** voor TiDB via Hyperdrive
 - Connection pooling: Cloudflare Hyperdrive — **binding geconfigureerd, getest**
 - Database: TiDB Cloud (PostgreSQL-compatibel, public preview) — **connectiviteit geverifieerd**
+- D1 database: `smart-system-identity` — **binding geconfigureerd (`smart_system_identity`), ongebruikt in code**
 
 ## Endpoints
 

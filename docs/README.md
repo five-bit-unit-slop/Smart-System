@@ -32,11 +32,12 @@ docs/
 
 ## Key Architecture Decisions
 
-- **Database:** TiDB Cloud (PostgreSQL-compatible, public preview)
+- **Database (sensor data):** TiDB Cloud (PostgreSQL-compatible, public preview)
+- **Database (identity/auth):** Cloudflare D1 (`smart-system-identity`) — binding configured, unused in code
 - **Connection pooling:** Cloudflare Hyperdrive
 - **Backend:** Cloudflare Worker (Node.js HTTP compat) with `pg` driver
-- **Data flow:** Pico W → Worker → Hyperdrive → TiDB
-- **Zero out-of-pocket cost:** free tiers for Cloudflare Workers, Hyperdrive, TiDB Cloud Serverless
+- **Data flow:** Pico W → Worker → Hyperdrive → TiDB (sensor data); D1 for identity (planned)
+- **Zero out-of-pocket cost:** free tiers for Cloudflare Workers, Hyperdrive, TiDB Cloud Serverless, D1
 - **Schema:** Redesign in `docs/Backend/DBs/Redesign/` (old TiDB/Azure schemas obsolete)
 
 ## Verified Implementation Status (External)
@@ -47,10 +48,12 @@ The following is deployed **in a separate Cloudflare Worker** (not in this repo)
 - **`pg` (node-postgres) driver** — integrated, executes queries via Hyperdrive
 - **Cloudflare Hyperdrive binding** — configured in production; `localConnectionString` in `wrangler.toml` for local dev
 - **TiDB Cloud connectivity** — verified: `SELECT * FROM pg_tables` works, database `postgres`, PostgreSQL compatibility 17.0
+- **D1 binding** — configured (`smart_system_identity`), not used in code
 - **Endpoints tested:** `GET /health` (200), `POST /api/sensor-data` (200), `POST /auth` (200)
 
 **Not yet verified:**
 - Sensor-data insertion into `measurements` table (new schema)
 - Complete Pico W → Worker → TiDB pipeline
 - JWT validation (currently: non-empty Bearer token check only)
+- D1 integration for identity/auth
 - New database schema deployment to TiDB Cloud
