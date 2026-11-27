@@ -1,4 +1,6 @@
-# SmartSystemDB - Database Design
+# SmartSystemDB - Database Design — **VEROUDERD**
+
+> **Let op:** Dit Azure SQL (T-SQL) schema is vervangen door de PostgreSQL redesign in `../Redesign/`. Dit document wordt bewaard voor referentie.
 
 ## Root
 

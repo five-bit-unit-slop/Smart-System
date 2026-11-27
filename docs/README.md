@@ -8,18 +8,19 @@ This folder contains documentation for the Smart-System project.
 docs/
 ├── Backend/
 │   ├── DBs/
-│   │   ├── TiDB/           # TiDB Cloud (PostgreSQL) schema & queries
+│   │   ├── Redesign/       # Nieuwe schema (actueel)
 │   │   │   ├── SQLdb.md    # Database design (PostgreSQL syntax)
 │   │   │   └── query.sql   # DDL statements
+│   │   ├── TiDB/           # Verouderd: TiDB Cloud schema — voor referentie
 │   │   ├── Azure/          # Verouderd: Azure SQL (T-SQL) — voor referentie
 │   │   └── D1/             # Verouderd: Cloudflare D1 migratie
 │   ├── MITM/
 │   │   ├── MITM.md         # MITM server design (pg + Hyperdrive)
-│   │   └── MITM-roadmap.md # Security roadmap (TiDB + Hyperdrive)
+│   │   └── MITM-roadmap.md # Security roadmap
 │   └── DMZ.md              # Raspberry Pi fallback gateway design
 ├── security/
 │   ├── threat-model.md     # Threat model (STRIDE-achtig)
-│   └── infrastructure-plan.md # Hosting, back-ups, HA, DR (TiDB + Hyperdrive)
+│   └── infrastructure-plan.md # Hosting, back-ups, HA, DR
 ├── TI/
 │   ├── modules.md          # Hardware modules (PIR, laser)
 │   └── webtest.md          # JSON protocol voorbeelden (oude LAN-test)
@@ -34,6 +35,7 @@ docs/
 - **Backend:** Cloudflare Worker (Node.js HTTP compat) met `pg` driver
 - **Data flow:** Pico W → Worker → Hyperdrive → TiDB
 - **Zero out-of-pocket cost:** gratis tiers voor Cloudflare Workers, Hyperdrive, TiDB Cloud Serverless
+- **Schema:** Redesign in `docs/Backend/DBs/Redesign/` (oude TiDB/Azure schemas verouderd)
 
 ## Verified Implementation Status
 
@@ -46,7 +48,7 @@ De volgende componenten zijn gedeployed en getest in productie:
 - **Endpoints getest:** `GET /health` (200), `POST /api/sensor-data` (200), `POST /auth` (200)
 
 **Nog niet geverifieerd:**
-- Sensor-data insertie in `measurements` tabel
+- Sensor-data insertie in `measurements` tabel (nieuwe schema)
 - Complete Pico W → Worker → TiDB pipeline
 - JWT validatie (huidig: alleen non-empty Bearer token check)
-- Database schema deployment naar TiDB Cloud
+- Nieuwe database schema deployment naar TiDB Cloud

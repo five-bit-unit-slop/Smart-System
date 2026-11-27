@@ -18,7 +18,7 @@ De Worker is de enige component met database-toegang. Pico W, DMZ en Tkinter com
 
 ## Phase 1 - Worker & Database Setup
 - [x] TiDB Cloud cluster aangemaakt (gratis tier / serverless)
-- [ ] Database schema deployen via `docs/Backend/DBs/TiDB/query.sql` (via Hyperdrive)
+- [ ] Database schema deployen via `docs/Backend/DBs/Redesign/query.sql` (via Hyperdrive)
 - [x] Cloudflare Hyperdrive binding geconfigureerd voor productie
 - [x] `localConnectionString` ingesteld voor lokale ontwikkeling (wrangler.toml)
 - [x] Worker project geïnitialiseerd met `pg` driver

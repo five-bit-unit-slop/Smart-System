@@ -3,9 +3,9 @@
 ## Backend & Database
 
 - [x] TiDB Cloud database aangemaakt (Serverless tier, PostgreSQL-compatibel, public preview)
-- [x] Database schema gedefinieerd voor PostgreSQL (`docs/Backend/DBs/TiDB/SQLdb.md`)
-- [x] DDL queries voor PostgreSQL (`docs/Backend/DBs/TiDB/query.sql`)
-- [ ] Schema gedeployed naar TiDB Cloud (via Hyperdrive)
+- [x] **Nieuw schema gedefinieerd** (`docs/Backend/DBs/Redesign/SQLdb.md`, `query.sql`) — Gateways tabel compleet, rest pending
+- [x] Oude TiDB schema (`docs/Backend/DBs/TiDB/`) en Azure schema (`docs/Backend/DBs/Azure/`) gemarkeerd als verouderd
+- [ ] Nieuw schema deployen naar TiDB Cloud (via Hyperdrive)
 - [x] D1 migratie `processed_requests` vervallen — deduplicatie via unieke `request_id` constraint op `measurements`
 
 ## MITM API (Cloudflare Worker — MITM-server/)

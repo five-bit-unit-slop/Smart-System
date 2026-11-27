@@ -1,8 +1,10 @@
-# SmartSystemDB - Database Design (TiDB Cloud / PostgreSQL)
+# SmartSystemDB - Database Design (TiDB Cloud / PostgreSQL) — **VEROUDERD**
+
+> **Let op:** Dit schema is vervangen door de redesign in `../Redesign/`. Dit document wordt bewaard voor referentie.
 
 TiDB's PostgreSQL-compatibiliteit is momenteel in **public preview**. Het schema hieronder gebruikt PostgreSQL-syntax.
 
-**Verified:** Deployed Cloudflare Worker met `pg` driver via Hyperdrive voert queries uit op TiDB. Getest: `SELECT * FROM pg_tables`, database `postgres`, PostgreSQL compatibility version 17.0.
+**Verified (voor dit schema):** Deployed Cloudflare Worker met `pg` driver via Hyperdrive voert queries uit op TiDB. Getest: `SELECT * FROM pg_tables`, database `postgres`, PostgreSQL compatibility version 17.0.
 
 ## Root
 

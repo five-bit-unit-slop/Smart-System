@@ -85,19 +85,20 @@ De Worker gebruikt Cloudflare's Node.js HTTP compatibility layer (`httpServerHan
 - Complete Pico W → Worker → TiDB pipeline
 - JWT validatie (huidig: alleen check op non-empty Bearer token)
 
-## Datamodellen (TiDB Cloud / PostgreSQL)
+## Datamodellen (Redesign — PostgreSQL)
 
-Zie `docs/Backend/DBs/TiDB/SQLdb.md` voor het volledige schema.
+Zie `docs/Backend/DBs/Redesign/SQLdb.md` voor het volledige schema.
 
-**Tabellen:**
-- `Users` — Tkinter-gebruikers, wachtwoordhash (Argon2id), rol (Admin/User)
-- `Gateways` — Raspberry Pi-gateways, `gateway_token_hash` (SHA-256)
-- `Devices` — Pico W-apparaten, gekoppeld aan gateway
-- `Sensors` — Sensoren per apparaat (`sensor_key`, type, unit)
-- `Measurements` — Historische meetwaarden, `request_id` uniek voor deduplicatie
-- `Alerts` — Waarschuwingen (Info/Warning/Critical), gekoppeld aan sensor/measurement
+**Tabellen (gepland):**
+- `gateways` — Raspberry Pi-gateways, `hash` (SHA-256 token hash) — **gedefinieerd**
+- `devices` — Pico W-apparaten, gekoppeld aan gateway — *pending*
+- `sensors` — Sensoren per apparaat (`key`, type, unit) — *pending*
+- `measurements` — Historische meetwaarden, `request_id` uniek voor deduplicatie — *pending*
+- `alerts` — Waarschuwingen (info/warning/critical), gekoppeld aan sensor/measurement — *pending*
+- `users` — Tkinter-gebruikers, wachtwoordhash (Argon2id), rol (admin/user) — *pending*
+- `api_keys` — API keys voor device/gateway authenticatie (JWT issuance) — *pending*
 
-*Schema is PostgreSQL-compatibel (UUID, TIMESTAMPTZ, TEXT, BOOLEAN). TiDB's PostgreSQL-compatibiliteit is in public preview.*
+*Oude schemas in `docs/Backend/DBs/TiDB/` en `docs/Backend/DBs/Azure/` zijn **verouderd** maar bewaard voor referentie.*
 
 ## Beveiliging
 
@@ -146,14 +147,18 @@ Zie `docs/security/threat-model.md` en `docs/security/infrastructure-plan.md` vo
 | Bestand | Onderwerp |
 |---|---|
 | `docs/README.md` | Documentatie index |
-| `docs/Backend/DBs/TiDB/SQLdb.md` | Database schema & relaties (PostgreSQL) |
-| `docs/Backend/DBs/TiDB/query.sql` | Voorbeeldqueries (PostgreSQL) |
-| `docs/Backend/DBs/D1/0001_initial.sql` | D1 migratie (processed_requests tabel) — *verouderd* |
+| `docs/Backend/DBs/Redesign/SQLdb.md` | **Nieuw** database schema & relaties (PostgreSQL) |
+| `docs/Backend/DBs/Redesign/query.sql` | **Nieuw** DDL statements |
+| `docs/Backend/DBs/TiDB/SQLdb.md` | Verouderd: TiDB schema — voor referentie |
+| `docs/Backend/DBs/TiDB/query.sql` | Verouderd: TiDB DDL — voor referentie |
+| `docs/Backend/DBs/Azure/SQLdb.md` | Verouderd: Azure SQL schema — voor referentie |
+| `docs/Backend/DBs/Azure/query.sql` | Verouderd: Azure SQL DDL — voor referentie |
+| `docs/Backend/DBs/D1/0001_initial.sql` | Verouderd: D1 migratie |
 | `docs/Backend/MITM/MITM.md` | MITM server ontwerp (pg + Hyperdrive) |
-| `docs/Backend/MITM/MITM-roadmap.md` | Beveiligingsroadmap (nieuw: TiDB + Hyperdrive) |
+| `docs/Backend/MITM/MITM-roadmap.md` | Beveiligingsroadmap |
 | `docs/Backend/DMZ.md` | Raspberry Pi gateway design (lokaal alarm & buffering) |
 | `docs/security/threat-model.md` | Threat model (STRIDE-achtig) |
-| `docs/security/infrastructure-plan.md` | Hosting, back-ups, HA, DR (TiDB + Hyperdrive) |
+| `docs/security/infrastructure-plan.md` | Hosting, back-ups, HA, DR |
 | `docs/TI/modules.md` | Hardware modules (PIR, laser) |
 | `docs/TI/webtest.md` | JSON protocolle voorbeelden (oude LAN-test) |
 | `docs/Brand guidelines/` | Logo's, kleurenpalet (#0B1020, #7C9DFF, #F2F4F8) |

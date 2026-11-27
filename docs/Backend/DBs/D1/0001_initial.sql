@@ -1,3 +1,6 @@
+-- VEROUDERD: D1 migratie voor processed_requests tabel
+-- Vervangen door unieke request_id constraint op measurements tabel in nieuwe schema (../Redesign/)
+
 CREATE TABLE processed_requests(
     request_id TEXT NOT NULL,
 
