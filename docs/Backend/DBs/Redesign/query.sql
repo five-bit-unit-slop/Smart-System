@@ -8,6 +8,7 @@ CREATE TABLE gateways(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     hash CHAR(64) NOT NULL UNIQUE,
+    owner_user_id UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     last_seen_at TIMESTAMPTZ,
     is_active BOOLEAN NOT NULL DEFAULT true
@@ -16,6 +17,7 @@ CREATE TABLE gateways(
 -- Index for active gateway lookups
 CREATE INDEX idx_gateways_active ON gateways(id) WHERE is_active = true;
 CREATE INDEX idx_gateways_last_seen ON gateways(last_seen_at DESC);
+CREATE INDEX idx_gateways_owner ON gateways(owner_user_id);
 
 -- ============================================================
 -- DEVICES
@@ -67,28 +69,31 @@ CREATE INDEX idx_measurements_received ON measurements(received_at DESC);
 -- ============================================================
 CREATE TABLE alerts(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    sensor_id UUID NOT NULL REFERENCES sensors(id),
-    measurement_id UUID REFERENCES measurements(id),
-    alert_type VARCHAR(50) NOT NULL,
-    message VARCHAR(500) NOT NULL,
+    device_id UUID NOT NULL REFERENCES devices(id),
+    sensor_id UUID REFERENCES sensors(id),
+    alert_type VARCHAR(255) NOT NULL,
+    description TEXT,
     severity VARCHAR(20) NOT NULL CHECK (severity IN ('info', 'warning', 'critical')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    is_resolved BOOLEAN NOT NULL DEFAULT false,
     resolved_at TIMESTAMPTZ
 );
+CREATE INDEX idx_alerts_device_created ON alerts(device_id, created_at DESC);
 CREATE INDEX idx_alerts_sensor_created ON alerts(sensor_id, created_at DESC);
-CREATE INDEX idx_alerts_unresolved ON alerts(sensor_id) WHERE resolved_at IS NULL;
+CREATE INDEX idx_alerts_unresolved ON alerts(device_id) WHERE is_resolved = false;
 
 -- ============================================================
--- USERS (TODO)
+-- USERS
 -- ============================================================
--- CREATE TABLE users(
---     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
---     username VARCHAR(50) NOT NULL UNIQUE,
---     password_hash VARCHAR(255) NOT NULL,
---     role VARCHAR(20) NOT NULL CHECK (role IN ('admin', 'user')),
---     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
---     is_active BOOLEAN NOT NULL DEFAULT true
--- );
+CREATE TABLE users(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    is_active BOOLEAN NOT NULL DEFAULT true
+);
+CREATE INDEX idx_users_active ON users(id) WHERE is_active = true;
 
 -- ============================================================
 -- API KEYS (TODO)

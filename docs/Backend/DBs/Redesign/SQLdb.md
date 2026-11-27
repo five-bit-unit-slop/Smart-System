@@ -19,7 +19,7 @@
 | `sensors` | Physical sensors connected to Pico W boards | **Created** |
 | `measurements` | Historical sensor readings | **Created** |
 | `alerts` | Security events and detected suspicious activity | **Next** |
-| `users` | Application accounts and authentication | Pending |
+| `users` | Application accounts and authentication | **Defined** |
 | `api_keys` | API keys for device/gateway auth | Pending |
 
 ---
@@ -31,6 +31,7 @@ CREATE TABLE gateways(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     hash CHAR(64) NOT NULL UNIQUE,
+    owner_user_id UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     last_seen_at TIMESTAMPTZ,
     is_active BOOLEAN NOT NULL DEFAULT true
@@ -44,12 +45,14 @@ CREATE TABLE gateways(
 | `id` | UUID | PK, `DEFAULT gen_random_uuid()` | Unique gateway identifier |
 | `name` | VARCHAR(255) | NOT NULL | Human-readable gateway name |
 | `hash` | CHAR(64) | NOT NULL, UNIQUE | SHA-256 hash of the gateway token |
+| `owner_user_id` | UUID | NOT NULL, FK → `users(id)` | User who owns this gateway |
 | `created_at` | TIMESTAMPTZ | NOT NULL, `DEFAULT now()` | Registration timestamp |
 | `last_seen_at` | TIMESTAMPTZ | NULL | Last contact timestamp |
 | `is_active` | BOOLEAN | NOT NULL, `DEFAULT true` | Soft disable flag |
 
 **Notes:**
 - `hash` stores SHA-256 of the bearer token used for Worker ↔ Gateway authentication
+- `owner_user_id` links gateway to its owning user (for multi-tenancy)
 - `last_seen_at` updated by Worker on successful `/api/sensor-data` or `/health` from gateway
 - `is_active` allows disabling a gateway without deleting its data
 
@@ -113,7 +116,7 @@ CREATE TABLE sensors(
 | `is_active` | BOOLEAN | NOT NULL, `DEFAULT true` | Soft disable flag |
 
 **Constraints:**
-- `uq_sensors_device_name` — unique sensor name per device (allows multiple sensors of same type with different names)
+- `uq_sensors_device_name` - unique sensor name per device (allows multiple sensors of same type with different names)
 
 **Notes:**
 - `sensor_type` identifies the sensor category (e.g., `light`, `motion`, `laser`, `draaiknop`)
@@ -147,7 +150,7 @@ CREATE TABLE measurements(
 | `received_at` | TIMESTAMPTZ | NOT NULL, `DEFAULT now()` | When the measurement was stored (server time) |
 
 **Constraints:**
-- `request_id` UNIQUE — prevents duplicate ingestion from retries
+- `request_id` UNIQUE - prevents duplicate ingestion from retries
 
 **Indexes:**
 ```sql
@@ -166,12 +169,13 @@ CREATE INDEX idx_measurements_received ON measurements(received_at DESC);
 ```sql
 CREATE TABLE alerts(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    sensor_id UUID NOT NULL REFERENCES sensors(id),
-    measurement_id UUID REFERENCES measurements(id),
-    alert_type VARCHAR(50) NOT NULL,
-    message VARCHAR(500) NOT NULL,
+    device_id UUID NOT NULL REFERENCES devices(id),
+    sensor_id UUID REFERENCES sensors(id),
+    alert_type VARCHAR(255) NOT NULL,
+    description TEXT,
     severity VARCHAR(20) NOT NULL CHECK (severity IN ('info', 'warning', 'critical')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    is_resolved BOOLEAN NOT NULL DEFAULT false,
     resolved_at TIMESTAMPTZ
 );
 ```
@@ -181,32 +185,57 @@ CREATE TABLE alerts(
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | UUID | PK, `DEFAULT gen_random_uuid()` | Unique alert identifier |
-| `sensor_id` | UUID | NOT NULL, FK → `sensors(id)` | Sensor that triggered the alert |
-| `measurement_id` | UUID | FK → `measurements(id)` | Measurement that caused the alert (nullable) |
-| `alert_type` | VARCHAR(50) | NOT NULL | Alert category: `motion_detected`, `threshold_exceeded`, `device_offline`, `tamper`, etc. |
-| `message` | VARCHAR(500) | NOT NULL | Human-readable description |
+| `device_id` | UUID | NOT NULL, FK → `devices(id)` | Device that triggered the alert |
+| `sensor_id` | UUID | FK → `sensors(id)` | Sensor that triggered the alert (nullable) |
+| `alert_type` | VARCHAR(255) | NOT NULL | Alert category: `motion_detected`, `threshold_exceeded`, `device_offline`, `tamper`, etc. |
+| `description` | TEXT | | Human-readable description |
 | `severity` | VARCHAR(20) | NOT NULL, CHECK | `info`, `warning`, `critical` |
 | `created_at` | TIMESTAMPTZ | NOT NULL, `DEFAULT now()` | When alert was raised |
+| `is_resolved` | BOOLEAN | NOT NULL, DEFAULT false | Whether alert is resolved |
 | `resolved_at` | TIMESTAMPTZ | NULL | When alert was resolved (NULL = active) |
 
 **Indexes:**
 ```sql
+CREATE INDEX idx_alerts_device_created ON alerts(device_id, created_at DESC);
 CREATE INDEX idx_alerts_sensor_created ON alerts(sensor_id, created_at DESC);
-CREATE INDEX idx_alerts_unresolved ON alerts(sensor_id) WHERE resolved_at IS NULL;
+CREATE INDEX idx_alerts_unresolved ON alerts(device_id) WHERE is_resolved = false;
 ```
 
 **Notes:**
-- `resolved_at` IS NULL means alert is active; set to timestamp when resolved
-- `measurement_id` nullable — some alerts (e.g., device offline) aren't tied to a specific measurement
+- `is_resolved` = false means alert is active; set to true + `resolved_at` when resolved
+- `sensor_id` nullable - device-level alerts (e.g., device offline) may not have a sensor
+- `device_id` required - every alert belongs to a device
 - `alert_type` uses snake_case for programmatic handling
+- Consider adding a partial unique index to prevent duplicate active alerts of same type per device
 
-## Users (Planned)
+## Users
 
 ```sql
--- TODO: Define
--- Argon2id password hash
--- role: 'admin' | 'user'
+CREATE TABLE users(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    is_active BOOLEAN NOT NULL DEFAULT true
+);
 ```
+
+**Columns:**
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | UUID | PK, `DEFAULT gen_random_uuid()` | Unique user identifier |
+| `username` | VARCHAR(255) | NOT NULL, UNIQUE | Login username |
+| `password_hash` | VARCHAR(255) | NOT NULL | Argon2id hash of password |
+| `role` | VARCHAR(20) | NOT NULL, DEFAULT 'user', CHECK | `admin` or `user` |
+| `created_at` | TIMESTAMPTZ | NOT NULL, `DEFAULT now()` | Registration timestamp |
+| `is_active` | BOOLEAN | NOT NULL, `DEFAULT true` | Soft disable flag |
+
+**Notes:**
+- `password_hash` stores Argon2id hash (recommended) or PBKDF2-HMAC-SHA256 (legacy)
+- `role` determines permissions in Tkinter app and Worker API
+- `is_active` allows disabling account without deletion
 
 ## API Keys (Planned)
 
@@ -227,7 +256,7 @@ CREATE INDEX idx_alerts_unresolved ON alerts(sensor_id) WHERE resolved_at IS NUL
 | `Devices` | `devices` | `device_name` → `name` |
 | `Sensors` | `sensors` | `sensor_key` → `key`, `sensor_name` → `name`, `sensor_type` → `type` |
 | `Measurements` | `measurements` | `measurement_value` → `value`, `recorded_at` → `recorded_at`, `received_at` → `received_at` |
-| `Alerts` | `alerts` | `alert_type` → `type`, `is_resolved` → `resolved_at` (NULL = unresolved) |
+| `Alerts` | `alerts` | `alert_type` → `type`, added `device_id` (required), `is_resolved` boolean, `description` text |
 | `Users` | `users` | `password_hash` unchanged, `role` CHECK constraint |
 
 ---
