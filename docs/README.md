@@ -15,7 +15,10 @@ docs/
 │   │   │   └── query.sql   # DDL statements
 │   │   ├── TiDB/           # Obsolete: TiDB Cloud schema — for reference
 │   │   ├── Azure/          # Obsolete: Azure SQL (T-SQL) — for reference
-│   │   └── D1/             # Obsolete: Cloudflare D1 migration
+│   │   └── D1/             # Active: Identity/Auth (smart-system-identity)
+│   │       ├── 0001_initial.sql      # Obsolete: processed_requests
+│   │       ├── 0002_identity_schema.sql  # Users, Sessions, GatewayCredentials
+│   │       └── README.md
 │   ├── MITM/
 │   │   ├── MITM.md         # MITM server design (pg + Hyperdrive)
 │   │   └── MITM-roadmap.md # Security roadmap

@@ -31,7 +31,7 @@ Smart-System/              # Documentatie (deze repository)
 | **Lokale gateway (DMZ)** | Raspberry Pi, Flask (Python) | `/sensor` POST, `/health` GET - **geen buffering, geen forwarding** |
 | **MITM API** | Cloudflare Worker, Node.js (HTTP compat), `pg` (node-postgres) | Deployed; endpoints bestaan; **insert niet geïmplementeerd**, auth stub |
 | **Database (sensor data)** | TiDB Cloud (PostgreSQL-compatibel, public preview) | 6 tabellen aangemaakt via Hyperdrive |
-| **Database (identity/auth)** | Cloudflare D1 (`smart-system-identity`) | Binding geconfigureerd, **nog niet gebruikt in code** |
+| **Database (identity/auth)** | Cloudflare D1 (`smart-system-identity`) | Binding geconfigureerd, **nog niet gebruikt in code**; schema: `docs/Backend/DBs/D1/0002_identity_schema.sql` |
 | **Connection pooling** | Cloudflare Hyperdrive | Binding geconfigureerd; `localConnectionString` lokaal |
 | **Desktop applicatie** | Python, Tkinter, Azure ttk theme | Inlog (PBKDF2), dashboard, simulatie - **geen API koppeling** |
 
