@@ -174,22 +174,22 @@ Er moet een betrouwbare back-upstrategie komen die gegevensverlies zoveel mogeli
 
 ### 3.1 Backupstrategie
 
-De primaire database (TiDB Cloud Serverless) wordt dagelijks om 07:00 uur (UTC+1) automatisch geback-upt door TiDB Cloud. Er worden zeven dagelijkse momentopnamen bewaard. De back-ups omvatten een volledige snapshot van de databasecluseter en ondersteunen point-in-time recovery (PITR) binnen de bewaartermijn.
+De primaire database (TiDB Cloud Serverless) wordt dagelijks om 07:00 uur (UTC+1) automatisch geback-upt door TiDB Cloud. Er worden achtentwintig dagelijkse momentopnamen bewaard. De back-ups omvatten een volledige snapshot van de databasecluseter en ondersteunen point-in-time recovery (PITR) binnen de bewaartermijn.
 
 De back-upplanning wordt volledig beheerd door TiDB Cloud. Er is geen handmatige planning of scriptvereiste vanuit de applicatie.
 
 ### 3.2 Rotatiebeleid
 
-Er worden maximaal zeven dagelijkse back-upversies bewaard. Zodra een nieuwe dagelijkse back-up wordt aangemaakt, vervalt de oudste versie (die ouder is dan zeven dagen) en wordt deze automatisch verwijderd door TiDB Cloud. Er is geen handmatige ingreep nodig voor deze rotatie.
+Er worden maximaal achtentwintig dagelijkse back-upversies bewaard. Zodra een nieuwe dagelijkse back-up wordt aangemaakt, vervalt de oudste versie (die ouder is dan achtentwintig dagen) en wordt deze automatisch verwijderd door TiDB Cloud. Er is geen handmatige ingreep nodig voor deze rotatie.
 
-De effectieve bewaartermijn is daarmee zeven kalenderdagen. Binnen deze termijn is herstel naar elk willekeurig moment (point-in-time recovery) mogelijk.
+De effectieve bewaartermijn is daarmee achtentwintig kalenderdagen. Binnen deze termijn is herstel naar elk willekeurig moment (point-in-time recovery) mogelijk.
 
 ### 3.3 Herstelprocedure
 
 Herstel van de database vanuit een back-up verloopt als volgt:
 
 1. **Identificeer het hersteltijdstip** — bepaal op basis van incidentanalyse naar welk moment (datum/tijd, UTC+1) de database moet worden teruggezet.
-2. **Controleer beschikbaarheid** — verifieer in de TiDB Cloud console of het gewenste tijdstip binnen de zeven-daagse bewaartermijn valt.
+2. **Controleer beschikbaarheid** — verifieer in de TiDB Cloud console of het gewenste tijdstip binnen de achtentwintig-daagse bewaartermijn valt.
 3. **Start herstel** — initieer een point-in-time restore via de TiDB Cloud console of API. Dit creeëert een nieuwe databasecluster met de data zoals die op het gekozen moment bestond.
 3. **Valideer herstel** — controleer of tabellen, relaties, constraints en data correct zijn hersteld (voorbeeldqueries, row counts, constraint checks).
 4. **Switch over** — pas de Hyperdrive-binding en eventuele connection strings aan naar het nieuwe cluster. Update DNS indien nodig.
@@ -209,15 +209,15 @@ Deze waarden zijn indicatief en gebaseerd op de standaard TiDB Cloud Serverless 
 
 - **Toegangsbeheer:** alle back-ups worden beheerd binnen de TiDB Cloud-omgeving. Toegang tot de console en API is beperkt tot gemachtigde personen (MFA-verplicht, least privilege).
 - **Opslagbeveiliging:** back-updata wordt door TiDB Cloud versleuteld at-rest (AES-256) en in transit (TLS 1.2+). De opslaglocatie wordt bepaald door TiDB Cloud (regionaal, overeenkomend met de gekozen database-regio).
-- **Bescherming tegen ongeautoriseerde verwijdering:** back-ups binnen de bewaartermijn kunnen niet handmatig worden verwijderd via de console zonder expliciete bevestiging en bevoegdheden. De automatische rotatie na zeven dagen is de enige verwijderingsmechanisme.
+- **Bescherming tegen ongeautoriseerde verwijdering:** back-ups binnen de bewaartermijn kunnen niet handmatig worden verwijderd via de console zonder expliciete bevestiging en bevoegdheden. De automatische rotatie na achtentwintig dagen is de enige verwijderingsmechanisme.
 - **Audittrail:** alle herstelacties en console-toegang worden gelogd door TiDB Cloud.
 
 Deze beveiligingsmaatregelen worden geboden door het TiDB Cloud-platform. Aanvullende maatregelen (bijv. cross-region copy, immutable storage) zijn niet geconfigureerd.
 
 ### 3.6 Beperkingen en risico's
 
-- **Meerdere onbruikbare back-ups:** als meerdere opeenvolgende dagelijkse back-ups corrupt of incompleet zijn (bijv. door een onopgemerkte databasecorruptie die al dagen lang bestaat), kan herstel onmogelijk worden binnen de zeven-daagse termijn. Een externe export-bestand kan dit risico mitigeren, maar is niet geïmplementeerd.
-- **Storing langer dan zeven dagen:** als een onopgemerkte storing of corruptie langer dan zeven dagen onopgemerkt blijft, vallen alle geldige back-ups buiten de bewaartermijn. Herstel is dan niet meer mogelijk via de standaard TiDB-back-ups.
+- **Meerdere onbruikbare back-ups:** als meerdere opeenvolgende dagelijkse back-ups corrupt of incompleet zijn (bijv. door een onopgemerkte databasecorruptie die al dagen lang bestaat), kan herstel onmogelijk worden binnen de achtentwintig-daagse termijn. Een externe export-bestand kan dit risico mitigeren, maar is niet geïmplementeerd.
+- **Storing langer dan achtentwintig dagen:** als een onopgemerkte storing of corruptie langer dan achtentwintig dagen onopgemerkt blijft, vallen alle geldige back-ups buiten de bewaartermijn. Herstel is dan niet meer mogelijk via de standaard TiDB-back-ups.
 - **Geen continue replicatie:** bij uitval van de primaire regio tussen twee back-ups (tussen 07:00 en 07:00 de volgende dag) gaat maximaal 24 uur aan transacties verloren.
 - **Geen cross-region back-up:** back-ups worden in dezelfde regio opgeslagen als de primaire database. Bij een regionale storing zijn zowel primaire database als back-ups onbereikbaar.
 - **Single-vendor afhankelijkheid:** back-upbeheer is volledig afhankelijk van TiDB Cloud. Er is geen tweede, onafhankelijke back-updoel geconfigureerd.
