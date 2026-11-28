@@ -1,26 +1,28 @@
-# SmartSystemDB - Database Design (Redesign)
+# SmartSystemDB - Databasedesign (redesign)
 
-> **Work in progress.** This is a complete redesign of the database schema. The previous TiDB/Azure SQL schemas in `../TiDB/` and `../Azure/` are **obsolete** but kept for reference.
+> **Status:** het doelschema is gedefinieerd en grotendeels gedeployed. De huidige TiDB-database bevat nog een legacy `users`-tabel en `gateways.owner_user_id`. Die worden verwijderd zodra de migratie is uitgevoerd. Zie `query.sql` voor het doelschema en de migratiestappen.
 
-## Design Principles
+De oude TiDB- en Azure-schemas in `../TiDB/` en `../Azure/` zijn **verouderd** en blijven alleen als referentie staan.
 
-- PostgreSQL syntax (TiDB Cloud compatible)
-- UUID primary keys with `gen_random_uuid()`
-- `TIMESTAMPTZ` for all timestamps
-- Explicit constraints, no implicit defaults where clarity matters
-- `snake_case` for all identifiers
+## Ontwerpprincipes
 
-## Tables (Planned)
+- PostgreSQL-syntax (TiDB Cloud-compatibel)
+- UUID-primaire sleutels met `gen_random_uuid()`
+- `TIMESTAMPTZ` voor alle tijdstippen
+- Expliciete constraints
+- `snake_case` voor alle identifiers
 
-| Table | Purpose | Status |
-|-------|---------|--------|
-| `gateways` | Registered Raspberry Pis | **Created** |
-| `devices` | Registered Pico W boards | **Created** |
-| `sensors` | Physical sensors connected to Pico W boards | **Created** |
-| `measurements` | Historical sensor readings | **Created** |
-| `alerts` | Security events and detected suspicious activity | **Created** |
-| `users` | Application accounts and authentication | **Created** |
-| `api_keys` | API keys for device/gateway auth | Pending |
+## Tabellen
+
+| Tabel | Doel | Status |
+|-------|------|--------|
+| `gateways` | Geregistreerde Raspberry Pi-gateways | **Gedeployed** |
+| `devices` | Geregistreerde Pico W-boards | **Gedeployed** |
+| `sensors` | Fysieke sensoren per Pico W-board | **Gedeployed** |
+| `measurements` | Historische meetwaarden | **Gedeployed** |
+| `alerts` | Beveiligingsgebeurtenissen | **Gedeployed** |
+
+De huidige TiDB-database bevat daarnaast nog een legacy `users`-tabel. Die hoort niet in het doelschema. Gebruikers, sessies en gateway-credentials staan in Cloudflare D1.
 
 ---
 
@@ -31,30 +33,30 @@ CREATE TABLE gateways(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     hash CHAR(64) NOT NULL UNIQUE,
-    owner_user_id UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     last_seen_at TIMESTAMPTZ,
     is_active BOOLEAN NOT NULL DEFAULT true
 );
 ```
 
-**Columns:**
+**Kolommen:**
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| `id` | UUID | PK, `DEFAULT gen_random_uuid()` | Unique gateway identifier |
-| `name` | VARCHAR(255) | NOT NULL | Human-readable gateway name |
-| `hash` | CHAR(64) | NOT NULL, UNIQUE | SHA-256 hash of the gateway token |
-| `owner_user_id` | UUID | NOT NULL, FK → `users(id)` | User who owns this gateway |
-| `created_at` | TIMESTAMPTZ | NOT NULL, `DEFAULT now()` | Registration timestamp |
-| `last_seen_at` | TIMESTAMPTZ | NULL | Last contact timestamp |
-| `is_active` | BOOLEAN | NOT NULL, `DEFAULT true` | Soft disable flag |
+| Kolom | Type | Constraints | Beschrijving |
+|-------|------|-------------|--------------|
+| `id` | UUID | PK, `DEFAULT gen_random_uuid()` | Unieke gateway-identifier |
+| `name` | VARCHAR(255) | NOT NULL | Leesbare gatewaynaam |
+| `hash` | CHAR(64) | NOT NULL, UNIQUE | SHA-256-hash van het gatewaytoken |
+| `created_at` | TIMESTAMPTZ | NOT NULL, `DEFAULT now()` | Registratietijdstip |
+| `last_seen_at` | TIMESTAMPTZ | NULL | Laatste contactmoment |
+| `is_active` | BOOLEAN | NOT NULL, `DEFAULT true` | Soft-disable |
 
-**Notes:**
-- `hash` stores SHA-256 of the bearer token used for Worker ↔ Gateway authentication
-- `owner_user_id` links gateway to its owning user (for multi-tenancy)
-- `last_seen_at` updated by Worker on successful `/api/sensor-data` or `/health` from gateway
-- `is_active` allows disabling a gateway without deleting its data
+**Notities:**
+
+- `hash` bevat de SHA-256-hash van het bearer token voor Worker naar gateway-authenticatie.
+- Eigendom en credentials staan in D1 (`GatewayCredentials`). `gateways.id` moet gelijk zijn aan `GatewayCredentials.gateway_id`.
+- De Worker valideert de koppeling tussen beide databases. Er is geen SQL foreign key tussen D1 en TiDB.
+- `last_seen_at` wordt door de Worker bijgewerkt zodra gateway-authenticatie is geimplementeerd.
+- `is_active` maakt het mogelijk een gateway uit te schakelen zonder gegevens te verwijderen.
 
 ---
 
@@ -71,22 +73,25 @@ CREATE TABLE devices(
 );
 ```
 
-**Columns:**
+**Kolommen:**
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| `id` | UUID | PK, `DEFAULT gen_random_uuid()` | Unique device identifier |
-| `gateway_id` | UUID | NOT NULL, FK → `gateways(id)` | Parent gateway |
-| `name` | VARCHAR(255) | NOT NULL | Human-readable device name (e.g., "pico-front-door") |
-| `created_at` | TIMESTAMPTZ | NOT NULL, `DEFAULT now()` | Registration timestamp |
-| `last_seen_at` | TIMESTAMPTZ | NULL | Last contact timestamp |
-| `is_active` | BOOLEAN | NOT NULL, `DEFAULT true` | Soft disable flag |
+| Kolom | Type | Constraints | Beschrijving |
+|-------|------|-------------|--------------|
+| `id` | UUID | PK, `DEFAULT gen_random_uuid()` | Unieke device-identifier |
+| `gateway_id` | UUID | NOT NULL, FK naar `gateways(id)` | Bovenliggende gateway |
+| `name` | VARCHAR(255) | NOT NULL | Leesbare device-naam, bijvoorbeeld `pico-voordeur` |
+| `created_at` | TIMESTAMPTZ | NOT NULL, `DEFAULT now()` | Registratietijdstip |
+| `last_seen_at` | TIMESTAMPTZ | NULL | Laatste contactmoment |
+| `is_active` | BOOLEAN | NOT NULL, `DEFAULT true` | Soft-disable |
 
-**Notes:**
-- Represents Pico W sensor nodes
-- `gateway_id` links to the Raspberry Pi gateway managing this device
-- `last_seen_at` updated by Worker on successful data receipt
-- `is_active` allows disabling a device without deleting its data
+**Notities:**
+
+- Vertegenwoordigt Pico W-sensorknopen.
+- `gateway_id` koppelt het device aan de gateway die het beheert.
+- `last_seen_at` wordt bijgewerkt zodra sensorinsertie is geimplementeerd.
+- `is_active` maakt het mogelijk een device uit te schakelen zonder gegevens te verwijderen.
+
+---
 
 ## Sensors
 
@@ -103,25 +108,29 @@ CREATE TABLE sensors(
 );
 ```
 
-**Columns:**
+**Kolommen:**
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| `id` | UUID | PK, `DEFAULT gen_random_uuid()` | Unique sensor identifier |
-| `device_id` | UUID | NOT NULL, FK → `devices(id)` | Parent device (Pico W) |
-| `name` | VARCHAR(255) | NOT NULL | Distinguishable name (e.g., "ldr-1", "pir-main") |
-| `sensor_type` | VARCHAR(255) | NOT NULL | Sensor category: `light`, `motion`, `laser`, `draaiknop`, etc. |
-| `unit` | VARCHAR(20) | NOT NULL | Unit of measurement: `lux`, `raw`, `boolean`, `cm`, etc. |
-| `created_at` | TIMESTAMPTZ | NOT NULL, `DEFAULT now()` | Registration timestamp |
-| `is_active` | BOOLEAN | NOT NULL, `DEFAULT true` | Soft disable flag |
+| Kolom | Type | Constraints | Beschrijving |
+|-------|------|-------------|--------------|
+| `id` | UUID | PK, `DEFAULT gen_random_uuid()` | Unieke sensor-identifier |
+| `device_id` | UUID | NOT NULL, FK naar `devices(id)` | Bovenliggend device |
+| `name` | VARCHAR(255) | NOT NULL | Onderscheidende naam, bijvoorbeeld `ldr-1` of `pir-main` |
+| `sensor_type` | VARCHAR(255) | NOT NULL | Sensortype: `light`, `motion`, `laser`, `draaiknop`, enzovoort |
+| `unit` | VARCHAR(20) | NOT NULL | Eenheid: `lux`, `raw`, `boolean`, `cm`, enzovoort |
+| `created_at` | TIMESTAMPTZ | NOT NULL, `DEFAULT now()` | Registratietijdstip |
+| `is_active` | BOOLEAN | NOT NULL, `DEFAULT true` | Soft-disable |
 
 **Constraints:**
-- `uq_sensors_device_name` - unique sensor name per device (allows multiple sensors of same type with different names)
 
-**Notes:**
-- `sensor_type` identifies the sensor category (e.g., `light`, `motion`, `laser`, `draaiknop`)
-- `name` allows multiple sensors of the same type to have distinguishable names
-- A device can have multiple sensors; each sensor belongs to exactly one device
+- `uq_sensors_device_name`: unieke sensornaam per device.
+
+**Notities:**
+
+- `sensor_type` bepaalt de categorie van de sensor.
+- `name` maakt meerdere sensoren van hetzelfde type onderscheidbaar.
+- Een device kan meerdere sensoren hebben. Elke sensor hoort bij precies een device.
+
+---
 
 ## Measurements
 
@@ -137,34 +146,40 @@ CREATE TABLE measurements(
 );
 ```
 
-**Columns:**
+**Kolommen:**
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| `id` | UUID | PK, `DEFAULT gen_random_uuid()` | Unique measurement identifier |
-| `sensor_id` | UUID | NOT NULL, FK → `sensors(id)` | Sensor that produced this reading |
-| `request_id` | UUID | NOT NULL, UNIQUE | Client-generated ID for deduplication |
-| `value` | DECIMAL(10,3) | NOT NULL | Measured value |
-| `unit` | VARCHAR(20) | NOT NULL | Unit of measurement (redundant with sensor for validation) |
-| `measured_at` | TIMESTAMPTZ | NOT NULL | When the measurement was taken (device time) |
-| `received_at` | TIMESTAMPTZ | NOT NULL, `DEFAULT now()` | When the measurement was stored (server time) |
+| Kolom | Type | Constraints | Beschrijving |
+|-------|------|-------------|--------------|
+| `id` | UUID | PK, `DEFAULT gen_random_uuid()` | Unieke meting-identifier |
+| `sensor_id` | UUID | NOT NULL, FK naar `sensors(id)` | Sensor die de meting produceerde |
+| `request_id` | UUID | NOT NULL, UNIQUE | Door het device gegenereerde ID voor deduplicatie |
+| `value` | DECIMAL(10,3) | NOT NULL | Meetwaarde |
+| `unit` | VARCHAR(20) | NOT NULL | Eenheid, redundant met sensor voor validatie |
+| `measured_at` | TIMESTAMPTZ | NOT NULL | Moment van meten volgens het device |
+| `received_at` | TIMESTAMPTZ | NOT NULL, `DEFAULT now()` | Moment waarop de meting is opgeslagen |
 
 **Constraints:**
-- `request_id` UNIQUE - prevents duplicate ingestion from retries
 
-**Indexes:**
+- `request_id` UNIQUE voorkomt dubbele insertie bij retries.
+
+**Indexen:**
+
 ```sql
 CREATE INDEX idx_measurements_sensor_measured ON measurements(sensor_id, measured_at DESC);
 CREATE INDEX idx_measurements_received ON measurements(received_at DESC);
 ```
 
-**Notes:**
-- `request_id` generated by device (UUID v4) enables exactly-once semantics
-- `unit` stored per measurement for validation against sensor definition
-- `measured_at` vs `received_at` allows clock drift detection
-- Partition by time range recommended for production volumes
+**Notities:**
 
-## Alerts (Next)
+- `request_id` wordt door het device gegenereerd. De huidige Pico W-firmware gebruikt nog `utime.ticks_ms()` in plaats van UUID v4.
+- `unit` wordt per meting opgeslagen om te kunnen valideren tegen de sensordefinitie.
+- `measured_at` en `received_at` maken detectie van klokdrift mogelijk.
+- Partitioner op tijd is aanbevolen voor grotere volumes.
+- De Worker voert nog geen insert uit. De unieke constraint is nog niet in de praktijk getest.
+
+---
+
+## Alerts
 
 ```sql
 CREATE TABLE alerts(
@@ -180,95 +195,91 @@ CREATE TABLE alerts(
 );
 ```
 
-**Columns:**
+**Kolommen:**
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| `id` | UUID | PK, `DEFAULT gen_random_uuid()` | Unique alert identifier |
-| `device_id` | UUID | NOT NULL, FK → `devices(id)` | Device that triggered the alert |
-| `sensor_id` | UUID | FK → `sensors(id)` | Sensor that triggered the alert (nullable) |
-| `alert_type` | VARCHAR(255) | NOT NULL | Alert category: `motion_detected`, `threshold_exceeded`, `device_offline`, `tamper`, etc. |
-| `description` | TEXT | | Human-readable description |
+| Kolom | Type | Constraints | Beschrijving |
+|-------|------|-------------|--------------|
+| `id` | UUID | PK, `DEFAULT gen_random_uuid()` | Unieke alert-identifier |
+| `device_id` | UUID | NOT NULL, FK naar `devices(id)` | Device dat de alert veroorzaakte |
+| `sensor_id` | UUID | FK naar `sensors(id)` | Sensor die de alert veroorzaakte (nullable) |
+| `alert_type` | VARCHAR(255) | NOT NULL | Alertcategorie: `motion_detected`, `threshold_exceeded`, `device_offline`, `tamper`, enzovoort |
+| `description` | TEXT | | Leesbare beschrijving |
 | `severity` | VARCHAR(20) | NOT NULL, CHECK | `info`, `warning`, `critical` |
-| `created_at` | TIMESTAMPTZ | NOT NULL, `DEFAULT now()` | When alert was raised |
-| `is_resolved` | BOOLEAN | NOT NULL, DEFAULT false | Whether alert is resolved |
-| `resolved_at` | TIMESTAMPTZ | NULL | When alert was resolved (NULL = active) |
+| `created_at` | TIMESTAMPTZ | NOT NULL, `DEFAULT now()` | Moment waarop de alert is aangemaakt |
+| `is_resolved` | BOOLEAN | NOT NULL, `DEFAULT false` | Of de alert is opgelost |
+| `resolved_at` | TIMESTAMPTZ | NULL | Moment van oplossen (NULL betekent actief) |
 
-**Indexes:**
+**Indexen:**
+
 ```sql
 CREATE INDEX idx_alerts_device_created ON alerts(device_id, created_at DESC);
 CREATE INDEX idx_alerts_sensor_created ON alerts(sensor_id, created_at DESC);
 CREATE INDEX idx_alerts_unresolved ON alerts(device_id) WHERE is_resolved = false;
 ```
 
-**Notes:**
-- `is_resolved` = false means alert is active; set to true + `resolved_at` when resolved
-- `sensor_id` nullable - device-level alerts (e.g., device offline) may not have a sensor
-- `device_id` required - every alert belongs to a device
-- `alert_type` uses snake_case for programmatic handling
-- Consider adding a partial unique index to prevent duplicate active alerts of same type per device
+**Notities:**
 
-## Users
-
-```sql
-CREATE TABLE users(
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username VARCHAR(255) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    is_active BOOLEAN NOT NULL DEFAULT true
-);
-```
-
-**Columns:**
-
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| `id` | UUID | PK, `DEFAULT gen_random_uuid()` | Unique user identifier |
-| `username` | VARCHAR(255) | NOT NULL, UNIQUE | Login username |
-| `password_hash` | VARCHAR(255) | NOT NULL | scrypt hash of password (format: `scrypt$N$r$p$salt$key`) |
-| `created_at` | TIMESTAMPTZ | NOT NULL, `DEFAULT now()` | Registration timestamp |
-| `is_active` | BOOLEAN | NOT NULL, `DEFAULT true` | Soft disable flag |
-
-**Notes:**
-- `password_hash` stores scrypt hash (format: `scrypt$N$r$p$salt$key`, base64 components). Argon2id not supported on Cloudflare Workers.
-- `is_active` allows disabling account without deletion
-
-## API Keys (Planned)
-
-```sql
--- TODO: Define
--- For Pico W device authentication (JWT issuance)
--- References devices(id) or gateways(id)
--- Scoped permissions, expiration, revocation
-```
+- `is_resolved = false` betekent dat de alert actief is.
+- `sensor_id` is nullable voor device-level alerts, bijvoorbeeld een offline device.
+- `device_id` is verplicht: elke alert hoort bij een device.
+- `alert_type` gebruikt snake_case voor programmatische verwerking.
+- Een gedeeltelijke unieke index kan dubbele actieve alerts van hetzelfde type per device voorkomen.
 
 ---
 
-## Migration from Old Schema
+## Identiteit en cross-database-relaties
 
-| Old (TiDB) | New (Redesign) | Notes |
-|------------|----------------|-------|
-| `Gateways` | `gateways` | `gateway_token_hash` → `hash`, `last_seen` → `last_seen_at`, `gateway_name` → `name` |
-| `Devices` | `devices` | `device_name` → `name` |
-| `Sensors` | `sensors` | `sensor_key` → `key`, `sensor_name` → `name`, `sensor_type` → `type` |
-| `Measurements` | `measurements` | `measurement_value` → `value`, `recorded_at` → `recorded_at`, `received_at` → `received_at` |
-| `Alerts` | `alerts` | `alert_type` → `type`, added `device_id` (required), `is_resolved` boolean, `description` text |
-| `Users` | `users` | `password_hash` unchanged, `role` column removed |
+Cloudflare D1 is de bron van waarheid voor identiteit en toegang:
+
+| D1-tabel | Doel |
+|----------|------|
+| `Users` | Gebruikersaccounts en wachtwoordhashes |
+| `UserSessions` | Sessietokens met vervaltijd en intrekking |
+| `GatewayCredentials` | Gatewaytokens en eigenaar (`owner_user_id`) |
+
+TiDB bevat geen gebruikers, sessies of gateway-credentials in het doelschema. De koppeling tussen de databases verloopt via gedeelde UUID's:
+
+- `gateways.id` in TiDB is gelijk aan `GatewayCredentials.gateway_id` in D1.
+- `devices.gateway_id` verwijst naar `gateways.id` in TiDB.
+- De Worker controleert bij elke gateway-actie of de gateway bestaat, actief is en bij de gebruiker hoort.
+- Er bestaat geen SQL foreign key tussen D1 en TiDB. Cross-database-consistentie is een verantwoordelijkheid van de Worker.
+
+---
+
+## Migratie van het oude schema
+
+| Oud (TiDB) | Nieuw (redesign) | Notities |
+|------------|------------------|----------|
+| `Gateways` | `gateways` | `gateway_token_hash` naar `hash`, `last_seen` naar `last_seen_at`, `gateway_name` naar `name` |
+| `Devices` | `devices` | `device_name` naar `name` |
+| `Sensors` | `sensors` | `sensor_key` en `sensor_name` naar `name`, `sensor_type` blijft `sensor_type` |
+| `Measurements` | `measurements` | `measurement_value` naar `value`, `recorded_at` naar `measured_at`, `received_at` blijft `received_at` |
+| `Alerts` | `alerts` | `alert_type` blijft `alert_type`, `device_id` verplicht, `is_resolved` en `description` toegevoegd |
+| `Users` | D1 `Users` | Gebruikers verhuizen naar D1; TiDB `users` vervalt |
 
 ---
 
 ## Deployment
 
-```bash
-# Via Hyperdrive from Cloudflare Worker
-psql "$HYPERDRIVE_CONNECTION_STRING" -f schema.sql
+Het doelschema is gedeployed naar TiDB Cloud via Hyperdrive. De huidige database bevat de vijf doeltabellen plus een legacy `users`-tabel.
 
-# Or locally
-psql "$LOCAL_CONNECTION_STRING" -f schema.sql
+```bash
+# Via Hyperdrive vanuit de Cloudflare Worker
+psql "$HYPERDRIVE_CONNECTION_STRING" -f query.sql
+
+# Lokaal
+psql "$LOCAL_CONNECTION_STRING" -f query.sql
 ```
 
-Requires `pgcrypto` extension for `gen_random_uuid()`:
+`pgcrypto` is nodig voor `gen_random_uuid()`:
+
 ```sql
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 ```
+
+### Huidige deployment
+
+- Aanwezig: `gateways`, `devices`, `sensors`, `measurements`, `alerts`, `users`.
+- Doel: `gateways`, `devices`, `sensors`, `measurements`, `alerts`.
+- Openstaand: `users` en `gateways.owner_user_id` verwijderen nadat is gecontroleerd dat geen code ze meer gebruikt.
+- `api_keys` is niet als aparte TiDB-tabel opgenomen. Gateway-credentials staan in D1. Device-credentials zijn nog niet ontworpen.

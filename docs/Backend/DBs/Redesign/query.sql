@@ -1,5 +1,12 @@
--- SmartSystemDB - PostgreSQL DDL (Redesign)
--- Requires: CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+-- SmartSystemDB - PostgreSQL DDL (doelschema)
+-- Vereist: CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+--
+-- Identiteit staat in Cloudflare D1 (Users, UserSessions, GatewayCredentials).
+-- Dit schema bevat alleen sensor- en apparaatgegevens.
+-- Gateway-UUIDs in TiDB moeten gelijk zijn aan GatewayCredentials.gateway_id in D1.
+-- De Worker valideert die koppeling; er is geen SQL foreign key tussen D1 en TiDB.
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ============================================================
 -- GATEWAYS
@@ -8,16 +15,14 @@ CREATE TABLE gateways(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     hash CHAR(64) NOT NULL UNIQUE,
-    owner_user_id UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     last_seen_at TIMESTAMPTZ,
     is_active BOOLEAN NOT NULL DEFAULT true
 );
 
--- Index for active gateway lookups
+-- Index voor actieve gateways
 CREATE INDEX idx_gateways_active ON gateways(id) WHERE is_active = true;
 CREATE INDEX idx_gateways_last_seen ON gateways(last_seen_at DESC);
-CREATE INDEX idx_gateways_owner ON gateways(owner_user_id);
 
 -- ============================================================
 -- DEVICES
@@ -65,7 +70,7 @@ CREATE INDEX idx_measurements_sensor_measured ON measurements(sensor_id, measure
 CREATE INDEX idx_measurements_received ON measurements(received_at DESC);
 
 -- ============================================================
--- ALERTS (Next)
+-- ALERTS
 -- ============================================================
 CREATE TABLE alerts(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -83,36 +88,20 @@ CREATE INDEX idx_alerts_sensor_created ON alerts(sensor_id, created_at DESC);
 CREATE INDEX idx_alerts_unresolved ON alerts(device_id) WHERE is_resolved = false;
 
 -- ============================================================
--- USERS
+-- IDENTITEIT EN CREDENTIALS
 -- ============================================================
-CREATE TABLE users(
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username VARCHAR(255) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    is_active BOOLEAN NOT NULL DEFAULT true
-);
-CREATE INDEX idx_users_active ON users(id) WHERE is_active = true;
+-- Users, UserSessions en GatewayCredentials staan in D1 (smart-system-identity).
+-- GatewayCredentials is de bron van waarheid voor gateway-eigendom en tokens.
+-- Device-credentials voor Pico W zijn nog niet ontworpen en horen ook in D1.
 
 -- ============================================================
--- API KEYS (TODO)
+-- MIGRATIE VAN DE HUIDIGE DEPLOYMENT
 -- ============================================================
--- CREATE TABLE api_keys(
---     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
---     key_hash CHAR(64) NOT NULL UNIQUE,
---     name VARCHAR(255) NOT NULL,
---     scope VARCHAR(50) NOT NULL,
---     device_id UUID REFERENCES devices(id),
---     gateway_id UUID REFERENCES gateways(id),
---     expires_at TIMESTAMPTZ,
---     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
---     revoked_at TIMESTAMPTZ,
---     CONSTRAINT chk_api_key_device_or_gateway CHECK (
---         (device_id IS NOT NULL AND gateway_id IS NULL)
---         OR
---         (device_id IS NULL AND gateway_id IS NOT NULL)
---     )
--- );
--- CREATE INDEX idx_api_keys_device ON api_keys(device_id);
--- CREATE INDEX idx_api_keys_gateway ON api_keys(gateway_id);
--- CREATE INDEX idx_api_keys_active ON api_keys(id) WHERE revoked_at IS NULL AND (expires_at IS NULL OR expires_at > now());
+-- De huidige TiDB-database bevat nog een legacy users-tabel en
+-- gateways.owner_user_id. Voer deze migratie pas uit nadat is gecontroleerd
+-- dat geen code of documentatie nog naar die kolom of tabel verwijst.
+--
+-- ALTER TABLE gateways DROP CONSTRAINT IF EXISTS gateways_owner_user_id_fkey;
+-- DROP INDEX IF EXISTS idx_gateways_owner;
+-- ALTER TABLE gateways DROP COLUMN IF EXISTS owner_user_id;
+-- DROP TABLE IF EXISTS users;

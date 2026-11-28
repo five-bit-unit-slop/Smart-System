@@ -1,81 +1,92 @@
-# MITM - TiDB + Hyperdrive Security Roadmap
+# MITM - beveiligingsroadmap
 
-## Architecture
+## Architectuur
+
+**Doel:**
 
 ```text
-Pico W (WiFi)
-      |
-      | HTTPS + JWT
-      v
-Cloudflare Worker (Node.js HTTP compat, pg driver)
-      |
-      | Hyperdrive connection pooling
-      v
-TiDB Cloud (PostgreSQL-compatibel, public preview)
+Pico W (WiFi) -> HTTPS + JWT -> Cloudflare Worker -> Hyperdrive -> TiDB Cloud (sensordata)
+                                      |
+                                      +-> D1 (identiteit, sessies, gateway-credentials)
 ```
 
-De Worker is de enige component met database-toegang. Pico W, DMZ en Tkinter communiceren uitsluitend via de Worker API.
+De Worker is de enige component met databasetoegang. Pico W, DMZ en Tkinter communiceren uitsluitend via de Worker-API.
 
-## Phase 1 - Worker & Database Setup
-- [x] TiDB Cloud cluster aangemaakt (gratis tier / serverless)
-- [ ] Database schema deployen via `docs/Backend/DBs/Redesign/query.sql` (via Hyperdrive)
-- [x] Cloudflare Hyperdrive binding geconfigureerd voor productie
-- [x] `localConnectionString` ingesteld voor lokale ontwikkeling (wrangler.toml)
-- [x] Worker project geïnitialiseerd met `pg` driver
-- [x] Basis endpoints: `/api/sensor-data`, `/auth`, `/health` — **allemaal HTTP 200, getest**
+## Fase 1 - Worker en database
 
-## Phase 2 - Authentication & Authorization
-- [ ] Pico W device registratie en JWT issuance (`/auth/register`, `/auth/token`)
-- [ ] JWT validatie middleware op `/api/sensor-data` (nu: non-empty Bearer token check)
-- [ ] Gateway (DMZ) Bearer token validatie voor fallback endpoints
-- [ ] Tkinter user auth: scrypt verify → JWT issuance (Argon2id not supported on Workers)
-- [ ] Rol-gebaseerde autorisatie (Admin/User) voor Tkinter endpoints
-- [ ] Token refresh / revocatie strategie
+- [x] TiDB Cloud-cluster aangemaakt (gratis serverless tier).
+- [x] Databaseschema gedeployed via `docs/Backend/DBs/Redesign/query.sql` (via Hyperdrive).
+- [x] Cloudflare Hyperdrive-binding geconfigureerd voor productie.
+- [x] `localConnectionString` ingesteld voor lokale ontwikkeling.
+- [x] Worker-project opgezet met de `pg`-driver.
+- [x] Basisendpoints getest: `/health`, `/auth/login`, `/auth/register`, `/api/sensor-data`.
+- [x] D1-database `smart-system-identity` aangemaakt en schema gedeployed.
+- [ ] Legacy `users`-tabel en `gateways.owner_user_id` uit TiDB verwijderen.
 
-## Phase 3 - Database Security
-- [x] Hyperdrive connection string als Cloudflare secret via binding
-- [x] `localConnectionString` in `wrangler.toml` (lokaal, niet in Git)
-- [x] Parameterized queries via `pg` driver
-- [ ] Transacties voor measurement + alert insert
-- [ ] Deduplicatie enforcement via unieke `request_id` constraint
-- [ ] Least-privilege database user (alleen INSERT/SELECT op nodige tabellen)
+## Fase 2 - Authenticatie en autorisatie
 
-## Phase 4 - Network & Transport Security
-- [x] TLS 1.2+ afgedwongen (Cloudflare edge + Hyperdrive + TiDB)
-- [ ] Rate limiting op `/api/sensor-data` (per device) en `/auth`
-- [ ] CORS policy voor Tkinter app origin
-- [ ] Security headers (HSTS, CSP, etc.) via Cloudflare Workers
+- [ ] Pico W-device-registratie en JWT-uitgifte (`/auth/register`, `/auth/token`).
+- [ ] JWT-validatie op `/api/sensor-data`. Nu wordt alleen een non-empty Bearer-token gecontroleerd.
+- [ ] Gateway-authenticatie via D1 `GatewayCredentials`.
+- [x] Tkinter-login: wachtwoordverificatie met scrypt en sessietoken in D1.
+- [ ] Registratie van Tkinter-gebruikers implementeren. `/auth/register` is een stub.
+- [ ] Rolgebaseerde autorisatie (Admin/User) voor Tkinter-endpoints.
+- [ ] Token refresh en intrekking implementeren.
+- [ ] Sessietokenvalidatie op beschermde endpoints.
 
-## Phase 5 - Data Validation & Integrity
-- [ ] Zod schema validatie voor alle inkomende payloads
-- [ ] Sensor data range checks (plausibiliteit)
-- [ ] Request ID generatie op Pico W (UUID v4) + validatie op Worker
-- [ ] Idempotente `/api/sensor-data` handling
+## Fase 3 - Databasebeveiliging
 
-## Phase 6 - Observability & Resilience
-- [ ] Structured logging (JSON) naar Cloudflare Logs
-- [ ] Metrics: request latency, error rate, DB pool usage
-- [x] Healthcheck endpoint controleert DB connectiviteit via Hyperdrive
-- [ ] Alerting op error rate / latency spikes
-- [ ] Integratietesten: Pico W → Worker → Hyperdrive → TiDB roundtrip
-- [x] TiDB PostgreSQL-compatibiliteit validatie (public preview) — **connectiviteit en query execution geverifieerd**
+- [x] Hyperdrive-connection string als Cloudflare-secret via binding.
+- [x] `localConnectionString` lokaal, niet in Git.
+- [x] Parameterized queries via de `pg`-driver.
+- [ ] Transacties voor measurement- en alert-inserts.
+- [ ] Deduplicatie afdwingen via de unieke `request_id`-constraint.
+- [ ] Least-privilege databasegebruiker: alleen INSERT en SELECT op de benodigde tabellen.
+- [ ] Gateway-UUID-validatie tussen D1 en TiDB in de Worker.
 
-## Implementation Order
+## Fase 4 - Netwerk en transport
 
-1. Worker & Database Setup — **voltooid**
-2. Authentication & Authorization
-3. Database Security — **gedeeltelijk voltooid**
-4. Network & Transport Security — **gedeeltelijk voltooid**
-5. Data Validation & Integrity
-6. Observability & Resilience — **gedeeltelijk voltooid**
+- [x] TLS 1.2+ voor Cloudflare edge, Hyperdrive en TiDB.
+- [ ] TLS voor Pico W naar Worker. De firmware gebruikt nu UDP zonder TLS.
+- [ ] Rate limiting op `/api/sensor-data`, `/auth/login` en `/auth/register`.
+- [ ] CORS-beleid voor de Tkinter-app.
+- [ ] Security headers (HSTS, CSP, enzovoort) via Cloudflare Workers.
 
-## Current Milestone
+## Fase 5 - Datavalidatie en integriteit
 
-Worker deployed met `pg` driver, Hyperdrive binding, basis endpoints werkend. Volgende stap: sensor-data insertie implementeren, JWT validatie, schema deployen naar TiDB.
+- [ ] Zod-schema-validatie voor alle inkomende payloads.
+- [ ] Range checks op sensorwaarden.
+- [ ] `request_id` als UUID v4 op de Pico W genereren en op de Worker valideren.
+- [ ] Idempotente afhandeling van `/api/sensor-data`.
+- [ ] Sensorinsertie in `measurements` implementeren.
 
-## Notes
+## Fase 6 - Observability en veerkracht
 
-- **Zero out-of-pocket cost**: TiDB Cloud serverless free tier + Cloudflare Workers free tier + Hyperdrive free tier.
-- **TiDB PostgreSQL-compatibiliteit is in public preview**. Connectiviteit en query execution geverifieerd via deployed Worker.
-- Geen Azure resources meer. Geen Azure Function, geen Managed Identity, geen TDS driver, geen `tedious`, geen `edgewire`.
-- De D1 `processed_requests` tabel (`docs/Backend/DBs/D1/0001_initial.sql`) is verouderd — deduplicatie gebeurt nu via unieke `request_id` constraint op `measurements`.
+- [ ] Structured logging (JSON) naar Cloudflare Logs.
+- [ ] Metrics: requestlatentie, error rate en databasepoolgebruik.
+- [ ] Healthcheck die de databaseconnectiviteit daadwerkelijk controleert. `/health` retourneert nu alleen `{"status":"ok"}`.
+- [ ] Alerting op error rate en latency.
+- [ ] Integratietest: Pico W -> Worker -> Hyperdrive -> TiDB.
+- [x] TiDB PostgreSQL-compatibiliteit gevalideerd (public preview). Connectiviteit en queryuitvoering zijn geverifieerd.
+
+## Implementatievolgorde
+
+1. Worker en database: voltooid.
+2. Authenticatie en autorisatie: gedeeltelijk voltooid.
+3. Databasebeveiliging: gedeeltelijk voltooid.
+4. Netwerk en transport: gedeeltelijk voltooid.
+5. Datavalidatie en integriteit: nog niet begonnen.
+6. Observability en veerkracht: gedeeltelijk voltooid.
+
+## Huidige mijlpaal
+
+De Worker is gedeployed met de `pg`-driver, Hyperdrive-binding, D1-login en basisendpoints. De volgende stap is sensorinsertie, sessietokenvalidatie, registratie en het verwijderen van de legacy-identiteit uit TiDB.
+
+## Notities
+
+- **Zero out-of-pocket cost:** TiDB Cloud Serverless free tier, Cloudflare Workers free tier, Hyperdrive free tier en D1 free tier.
+- **TiDB PostgreSQL-compatibiliteit is public preview.** Connectiviteit en queryuitvoering zijn geverifieerd via de gedeployde Worker.
+- **Back-ups:** TiDB Cloud Starter maakt dagelijkse snapshots. Point-in-time recovery is op deze tier niet beschikbaar. Zie `docs/security/infrastructure-plan.md`.
+- **D1 is de bron van waarheid voor identiteit.** TiDB bevat in het doelschema geen gebruikers.
+- **Azure wordt niet actief gebruikt.** De Azure-DB-Bridge is legacy en hoort niet bij de actieve architectuur. In `wrangler.jsonc` staan nog legacy Azure-variabelen; die kunnen worden opgeruimd.
+- De D1-tabel `processed_requests` is verouderd. Deduplicatie gebeurt via de unieke `request_id` op `measurements`.

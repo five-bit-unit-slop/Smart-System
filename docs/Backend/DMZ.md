@@ -1,45 +1,72 @@
-# DMZ Raspberry Pi Gateway Design
+# DMZ Raspberry Pi-gatewayontwerp
 
-> **Implementation lives in separate repo:** `smart-system-dmz` (not in this repository). This document describes the design.
+> **Implementatie staat in een aparte repository:** `DMZ`. Dit document beschrijft het ontwerp en de huidige implementatiestatus.
 
-## Role
+## Rol
 
-De Raspberry Pi fungeert als **lokale fallback-gateway** voor alarmverwerking en offline buffering. Sensor data van Pico W devices gaat nu rechtstreeks naar de Cloudflare Worker (via WiFi). De DMZ is niet meer de verplichte tussenlaag voor alle sensor data.
+De Raspberry Pi is bedoeld als **lokale fallback-gateway** voor alarmverwerking en offline buffering. Sensordata van Pico W-devices gaat in de doelarchitectuur rechtstreeks naar de Cloudflare Worker via WiFi. De DMZ is niet de verplichte tussenlaag voor alle sensordata.
 
-## Communication
+## Huidige implementatie
 
-- **Pico W → Worker (primaire route)**
-    - Pico W verbindt via WiFi direct met Cloudflare Worker (`/api/sensor-data`)
-    - JWT authenticatie per device
-- **Pico W → DMZ (fallback / lokaal)**
-    - Optioneel: lokaal netwerkprotocol (HTTP/MQTT) voor situaties zonder internet
-    - DMZ buffered in SQLite en synchroniseert via Worker `/api/sensor-data` met Bearer token
-- **DMZ → Worker**
-    - Alleen voor gebufferde data synchronisatie en healthchecks
-    - Bearer token (gateway_token) voor authenticatie
-- **Worker → DMZ**
-    - Commando's voor lokaal alarm activeren/deactiveren
-    - Configuratie updates
+De Flask-applicatie in de repository `DMZ` heeft op dit moment twee routes:
 
-## Security
+| Route | Methode | Status |
+|-------|---------|--------|
+| `/sensor` | POST | Ontvangt JSON, print de payload en retourneert 200. Geen opslag en geen forwarding. |
+| `/health` | GET | Retourneert `{"status":"online"}`. |
 
-- Pico W devices hebben geen directe database-toegang (altijd via Worker)
-- DMZ heeft geen database credentials; alleen Worker Bearer token
-- Lokale communicatie optioneel beveiligd (mTLS of PSK) — nog te bepalen
-- DMZ is fysiek bereikbaar; harde schijfversleuteling en `systemd` hardening aanbevolen
+Nog niet geimplementeerd:
 
-## Responsibilities
+- `POST /alarm`
+- SQLite-buffer (`measurements_queue`)
+- Forwarding naar de Worker
+- Authenticatie van Pico W of DMZ
+- `systemd`-serviceconfiguratie
+- Alarmhardware (buzzer, LED)
 
-- **Lokaal alarm**: buzzer/LED activeren bij trigger (onafhankelijk van cloud)
-- **Offline buffering**: SQLite wachtrij voor sensor data wanneer internet uitvalt
-- **Synchronisatie**: gebufferde data naar Worker sturen zodra verbinding hersteld
-- **Healthcheck**: `/health` endpoint voor monitoring
-- **Device discovery**: optioneel mDNS/bonjour voor Pico W onboarding
+## Doelcommunicatie
 
-## Hardware & Software
+- **Pico W naar Worker (primaire route)**
+  - Pico W verbindt via WiFi direct met de Cloudflare Worker (`/api/sensor-data`).
+  - Authenticatie met een device-scoped JWT.
+- **Pico W naar DMZ (fallback of lokaal)**
+  - Optioneel lokaal netwerkprotocol (HTTP of MQTT) voor situaties zonder internet.
+  - DMZ buffert in SQLite en synchroniseert via de Worker met een Bearer-token.
+- **DMZ naar Worker**
+  - Alleen voor gebufferde datasynchronisatie en healthchecks.
+  - Bearer-token voor gateway-authenticatie.
+- **Worker naar DMZ**
+  - Commando's voor lokaal alarm activeren en deactiveren.
+  - Configuratie-updates.
 
-- Raspberry Pi (model nog te bepalen: 4/5/Zero 2 W)
-- OS: Raspberry Pi OS Lite (64-bit) of Ubuntu Server
-- Flask applicatie (`/sensor` POST, `/health` GET, `/alarm` POST)
-- `systemd` service voor auto-start en herstart
-- SQLite voor lokale wachtrij (`measurements_queue` tabel)
+## Beveiliging
+
+**Doel:**
+
+- Pico W-devices hebben geen directe databasetoegang; al het verkeer gaat via de Worker.
+- DMZ heeft geen databasecredentials, alleen een Worker-Bearer-token.
+- Lokale communicatie wordt beveiligd met mTLS of een pre-shared key. De keuze is nog niet gemaakt.
+- DMZ is fysiek bereikbaar. Schijfversleuteling en `systemd`-hardening zijn aanbevolen.
+
+**Huidig:**
+
+- `/sensor` accepteert JSON zonder authenticatie.
+- `/health` is openbaar binnen het lokale netwerk.
+- Er is geen TLS tussen Pico W en DMZ.
+- Er is geen koppeling met de Worker.
+
+## Verantwoordelijkheden
+
+- **Lokaal alarm:** buzzer en LED activeren bij een trigger, onafhankelijk van de cloud.
+- **Offline buffering:** SQLite-wachtrij voor sensordata wanneer internet uitvalt.
+- **Synchronisatie:** gebufferde data naar de Worker sturen zodra de verbinding hersteld is.
+- **Healthcheck:** `/health` voor monitoring.
+- **Device discovery:** optioneel mDNS of Bonjour voor Pico W-onboarding.
+
+## Hardware en software
+
+- Raspberry Pi, model nog te bepalen (4, 5 of Zero 2 W).
+- Besturingssysteem: Raspberry Pi OS Lite 64-bit of Ubuntu Server.
+- Flask-applicatie met `/sensor`, `/health` en in de toekomst `/alarm`.
+- `systemd`-service voor automatisch starten en herstarten.
+- SQLite voor de lokale wachtrij (`measurements_queue`).

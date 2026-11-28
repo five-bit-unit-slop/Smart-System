@@ -1,6 +1,8 @@
-# SmartSystemDB - Database Design (TiDB Cloud / PostgreSQL) — **VEROUDERD**
+# SmartSystemDB - Database Design (TiDB Cloud / PostgreSQL) - **VEROUDERD**
 
 > **Let op:** Dit schema is vervangen door de redesign in `../Redesign/`. Dit document wordt bewaard voor referentie.
+>
+> **Identiteit:** in de huidige architectuur staan gebruikers, sessies en gateway-credentials in Cloudflare D1. De `Users`-tabel in dit document is historisch.
 
 TiDB's PostgreSQL-compatibiliteit is momenteel in **public preview**. Het schema hieronder gebruikt PostgreSQL-syntax.
 
@@ -113,9 +115,9 @@ Aanvullende CHECK-constraint:
 
 - Alle tijdstippen worden opgeslagen in UTC (TIMESTAMPTZ).
 - Primaire sleutels zijn UUIDs, gegenereerd met gen_random_uuid() (vereist pgcrypto extensie).
-- Foreign keys waarborgen referentiële integriteit.
+- Foreign keys waarborgen relationele integriteit.
 - Foreign keys verwijzen naar de primaire sleutel van de gekoppelde parent-tabel.
-- Gebruikerswachtwoorden worden gehasht met scrypt (Argon2id niet ondersteund op Cloudflare Workers).
+- Historisch werden gebruikerswachtwoorden met Argon2id gehasht. Gebruikers horen nu in D1.
 - Authenticatietokens worden niet als plaintext opgeslagen.
 - Alleen gateways hebben een cloud-authenticatietoken.
 - Pico W-apparaten authenticeren niet rechtstreeks bij de database; ze communiceren via de Worker.
@@ -138,7 +140,7 @@ Belangrijkste verschillen:
 | NEWID() | gen_random_uuid() |
 | SYSUTCDATETIME() | now() |
 | IDENTITY / SEQUENCE | gen_random_uuid() of SERIAL |
-| CHECK (role IN (...)) | CHECK (role IN (...)) — identiek |
+| CHECK (role IN (...)) | CHECK (role IN (...)) - identiek |
 | SCHEMA dbo. | Geen schema-prefix nodig (public) |
 
 TiDB ondersteunt de PostgreSQL wire protocol. De `pg` driver werkt out-of-the-box.

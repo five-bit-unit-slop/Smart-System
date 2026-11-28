@@ -1,9 +1,9 @@
 # Brand guidelines
 
-## een collectie van logo's een kleuren
+## Een collectie van logo's en kleuren
 
-Donkerblauw: #0B1020​
+Donkerblauw: #0B1020
 
-Lichtblauw: #7C9DFF​
+Lichtblauw: #7C9DFF
 
-Wit: #F2F4F8​
+Wit: #F2F4F8

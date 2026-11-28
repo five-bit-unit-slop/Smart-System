@@ -1,6 +1,8 @@
-# SmartSystemDB - Database Design — **VEROUDERD**
+# SmartSystemDB - Database Design - **VEROUDERD**
 
 > **Let op:** Dit Azure SQL (T-SQL) schema is vervangen door de PostgreSQL redesign in `../Redesign/`. Dit document wordt bewaard voor referentie.
+>
+> **Identiteit:** in de huidige architectuur staan gebruikers, sessies en gateway-credentials in Cloudflare D1. De `Users`-tabel in dit document is historisch.
 
 ## Root
 
@@ -109,9 +111,9 @@ Aanvullende CHECK-constraint:
 
 - Alle tijdstippen worden opgeslagen in UTC.
 - Primaire sleutels zijn uniek.
-- Foreign keys waarborgen referentiële integriteit.
+- Foreign keys waarborgen relationele integriteit.
 - Foreign keys verwijzen naar de primaire sleutel van de gekoppelde parent-tabel.
-- Gebruikerswachtwoorden worden gehasht met scrypt (Argon2id niet ondersteund op Cloudflare Workers).
+- Historisch werden gebruikerswachtwoorden met Argon2id gehasht. Gebruikers horen nu in D1.
 - Authenticatietokens worden niet als plaintext opgeslagen.
 - Alleen gateways hebben een cloud-authenticatietoken.
 - Pico W-apparaten communiceren lokaal met de Raspberry Pi en authenticeren niet rechtstreeks bij de MITM API.

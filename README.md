@@ -4,229 +4,264 @@
 
 Deze repository bevat de documentatie voor de ontwikkeling van een slim beveiligingssysteem voor woningen.
 
-Het systeem is ontworpen om ongewenste toegang te detecteren, een alarm te activeren en gebruikers te waarschuwen bij verdachte activiteiten. Hardware en software worden gecombineerd tot één beveiligingsoplossing.
+Het systeem is ontworpen om ongewenste toegang te detecteren, een alarm te activeren en gebruikers te waarschuwen bij verdachte activiteiten. Hardware en software worden gecombineerd tot een beveiligingsoplossing.
 
 ## Projectstructuur
 
-```
+```text
 Smart-System/              # Documentatie (deze repository)
-├── docs/                  # Technische documentatie, beveiliging, branding
+|-- docs/                  # Technische documentatie, beveiliging, branding
+
+MITM-server/               # Cloudflare Worker (MITM API)
+DMZ/                       # Flask-gateway op Raspberry Pi
+PICO/                      # MicroPython-firmware voor Pico W
+TKinter-application/       # Desktopapplicatie
+Azure-DB-Bridge/           # Legacy, niet actief
 ```
 
-> **Let op:** De implementatiecode (Tkinter, DMZ Flask, Cloudflare Worker, Pico W firmware) zit in afzonderlijke repositories of is nog niet aangemaakt. Deze repo bevat alleen documentatie.
+De implementatierepositories staan naast deze repository. Deze repository bevat alleen documentatie.
 
 ## Functionaliteiten
 
-- **Bewegingsdetectie:** Detecteren van beweging met behulp van sensoren (PIR, laser module, LDR).
-- **Toegangscontrole:** Gebruikers identificeren via inlog in de Tkinter-applicatie.
-- **Alarmsysteem:** Hoorbaar en zichtbaar alarm activeren bij ongeautoriseerde toegang (simulatie in prototype).
-- **Bedieningsdashboard:** Het beveiligingssysteem in- en uitschakelen via de Tkinter-applicatie.
-- **Gebeurtenissenlogboek:** Geregistreerde gebeurtenissen en toegangspogingen opslaan in TiDB Cloud.
+- **Bewegingsdetectie:** detecteren van beweging met PIR, laser en LDR.
+- **Toegangscontrole:** gebruikers identificeren via login in de Tkinter-applicatie.
+- **Alarmsysteem:** hoorbaar en zichtbaar alarm activeren bij ongeautoriseerde toegang (simulatie in het prototype).
+- **Bedieningsdashboard:** het beveiligingssysteem in- en uitschakelen via de Tkinter-applicatie.
+- **Gebeurtenissenlogboek:** gebeurtenissen en toegangspogingen opslaan in TiDB Cloud.
 
 ## Technische onderdelen
 
 | Onderdeel | Technologie | Status |
 |---|---|---|
-| **Sensoren (Pico W)** | Raspberry Pi Pico W, HC-SR501 PIR, HW-493 Laser, LDR | Prototype (UDP naar lokaal IP) |
-| **Lokale gateway (DMZ)** | Raspberry Pi, Flask (Python) | `/sensor` POST, `/health` GET - **geen buffering, geen forwarding** |
-| **MITM API** | Cloudflare Worker, Node.js (HTTP compat), `pg` (node-postgres) | Deployed; endpoints bestaan; **insert niet geïmplementeerd**, auth stub |
-| **Database (sensor data)** | TiDB Cloud (PostgreSQL-compatibel, public preview) | 6 tabellen aangemaakt via Hyperdrive |
-| **Database (identity/auth)** | Cloudflare D1 (`smart-system-identity`) | Binding geconfigureerd, **nog niet gebruikt in code**; schema: `docs/Backend/DBs/D1/0002_identity_schema.sql` |
-| **Connection pooling** | Cloudflare Hyperdrive | Binding geconfigureerd; `localConnectionString` lokaal |
-| **Desktop applicatie** | Python, Tkinter, Azure ttk theme | Inlog (PBKDF2), dashboard, simulatie - **geen API koppeling** |
+| **Sensoren (Pico W)** | Raspberry Pi Pico W, HC-SR501 PIR, HW-493 laser, LDR | Prototype: UDP naar lokaal IP |
+| **Lokale gateway (DMZ)** | Raspberry Pi, Flask | `/sensor` POST en `/health` GET. Geen buffering, geen forwarding. |
+| **MITM API** | Cloudflare Worker, Node.js HTTP-compat, `pg` | Gedeployed. Login geimplementeerd; registratie stub; geen sensorinsert. |
+| **Database (sensordata)** | TiDB Cloud (PostgreSQL-compatibel, public preview) | 5 doeltabellen gedeployed, plus legacy `users`. |
+| **Database (identiteit)** | Cloudflare D1 (`smart-system-identity`) | Actief. Users, UserSessions en GatewayCredentials gedeployed. |
+| **Connection pooling** | Cloudflare Hyperdrive | Binding geconfigureerd en getest. |
+| **Desktopapplicatie** | Python, Tkinter, Azure-thema | Login met PBKDF2, dashboard en simulatie. Geen API-koppeling. |
 
-*Architectuur (doel): Pico W → Cloudflare Worker → Hyperdrive → TiDB Cloud.*  
-*Huidige realiteit: Pico W → UDP → lokaal IP (DMZ/Worker dev); Worker → Hyperdrive → TiDB werkt; D1 binding aanwezig maar ongebruikt.*
+**Doelarchitectuur:** Pico W -> HTTPS + JWT -> Cloudflare Worker -> Hyperdrive -> TiDB Cloud. D1 beheert identiteit, sessies en gateway-credentials.
 
-## Teamleden
-
-- Esper
-- Ivar
-- Raosbin
-- Dyako
-- Midas
-
-## Duurzame ontwikkelingsdoelen
-
-- **SDG 9 - Industrie, innovatie en infrastructuur:** Ontwikkeling van innovatieve en betrouwbare beveiligingstechnologie.
-- **SDG 11 - Duurzame steden en gemeenschappen:** Bijdragen aan veiligere woonomgevingen.
-- **SDG 16 - Vrede, justitie en sterke publieke diensten:** Ondersteuning van bescherming tegen ongeautoriseerde toegang.
+**Huidige realiteit:** Pico W -> UDP -> lokaal IP. Worker -> Hyperdrive -> TiDB werkt voor `SELECT pg_tables`. Worker -> D1 werkt voor login. Tkinter heeft geen API-koppeling. DMZ buffert en forwardt niet.
 
 ## Architectuur
 
 **Doelarchitectuur:**
+
 ```text
-Pico W (WiFi) → HTTPS + JWT → Cloudflare Worker → Hyperdrive → TiDB Cloud (sensor data)
-                                    ↑                      → D1 (identity/auth)
-                              Tkinter app
-                              DMZ (fallback/buffer)
+Pico W (WiFi) -> HTTPS + JWT -> Cloudflare Worker -> Hyperdrive -> TiDB Cloud (sensordata)
+                                      |
+                                      +-> D1 (identiteit, sessies, gateway-credentials)
+
+Tkinter-app -> HTTPS + sessietoken -> Cloudflare Worker
+DMZ (Raspberry Pi) -> HTTPS + Bearer token -> Cloudflare Worker
 ```
 
 **Huidige implementatie:**
+
 ```text
-Pico W → UDP (lokaal LAN) → 192.168.137.1:8080 (dev Worker/DMZ)
-Cloudflare Worker (deployed) → Hyperdrive → TiDB Cloud ✓ (sensor data)
-                              → D1 binding aanwezig ✓ (ongebruikt in code)
-Tkinter → lokaal (geen API) ✗
-DMZ Flask → /sensor, /health ✓ (geen buffering, geen forward) ✗
+Pico W -> UDP (lokaal LAN) -> 192.168.137.1:8080
+Cloudflare Worker -> Hyperdrive -> TiDB Cloud (SELECT pg_tables, geen insert)
+Cloudflare Worker -> D1 (login, sessies)
+Tkinter -> lokaal (geen API)
+DMZ Flask -> /sensor en /health (geen buffering, geen forwarding)
 ```
 
-Lokale Raspberry Pi (DMZ) is bedoeld als fallback-gateway voor alarm/buffering, maar **nog niet geïmplementeerd**.
+De lokale Raspberry Pi is bedoeld als fallback-gateway voor alarm en buffering, maar die functionaliteit is nog niet geimplementeerd.
 
-## Geïmplementeerde en geteste functionaliteit
+## Geimplementeerde en bekende functionaliteit
 
-De volgende componenten zijn **gedeployed** (Worker) of **lokaal werkend**:
+De Worker is gedeployed. `/health` en `/api/sensor-data` zijn getest. De loginroute is geimplementeerd, maar nog niet end-to-end getest met een testaccount.
 
-**Cloudflare Worker (`smart-system-worker` repo, deployed):**
-- `GET /health` → HTTP 200, DB connectiviteit via Hyperdrive
-- `POST /api/sensor-data` → HTTP 200, verbindt via Hyperdrive, **maar voert alleen `SELECT * FROM pg_tables` uit**
-- `POST /auth` → HTTP 200, **stub (altijd OK)**
-- `pg` driver + Hyperdrive binding → TiDB queries werken
-- TiDB connectiviteit: `pg_tables` werkt, database `postgres`, PG compat 17.0
+**Cloudflare Worker (`MITM-server`, gedeployed):**
 
-**DMZ Flask (`smart-system-dmz` repo, lokaal):**
-- `POST /sensor` → ontvangt JSON, print, retourneert 200
-- `GET /health` → retourneert `{"status": "online"}`
+- `GET /health` -> HTTP 200 met `{"status":"ok"}`. Geen databasecheck.
+- `POST /api/sensor-data` -> HTTP 200. Controleert een non-empty Bearer-token en voert `SELECT * FROM pg_tables` uit via Hyperdrive. Geen insert.
+- `POST /auth/login` -> geimplementeerd. Leest D1, verifieert het wachtwoord met scrypt en maakt een sessietoken.
+- `POST /auth/register` -> stub. Controleert alleen `allow_registration` en retourneert 200 of 423.
+- `GET /auth` -> 404 met een verwijzing naar `/auth/login` en `/auth/register`.
+- `pg`-driver en Hyperdrive-binding werken.
+- D1-binding `smart_system_identity` is actief voor login en sessies.
+- TiDB-connectiviteit: database `postgres`, PostgreSQL-compatibiliteit 17.0.
 
-**Pico W (`smart-system-pico` repo, MicroPython):**
-- WiFi connectie werkt
-- UDP verzending naar `192.168.137.1:8080` (hardcoded lokaal IP)
-- **Geen HTTPS, geen JWT** - hardcoded token in payload
+**DMZ Flask (`DMZ`, lokaal):**
 
-**Tkinter (`smart-system-tkinter` repo):**
-- Inlog met PBKDF2-HMAC-SHA256 (600k iterations, 16-byte salt)
-- Dashboard met systeem actief/inactief toggle
-- Simulatie: deur/achterdeur/achterraam openen (alleen wanneer actief)
-- **Geen API koppeling naar Worker**
+- `POST /sensor` -> ontvangt JSON, print de payload en retourneert 200.
+- `GET /health` -> retourneert `{"status":"online"}`.
 
-**Nog niet geïmplementeerd:**
-- Sensor-data INSERT in `measurements` tabel
-- JWT validatie (nu: non-empty Bearer token check)
-- DMZ: SQLite buffering, forwarding naar Worker, `/alarm` endpoint
-- Pico W: HTTPS naar Worker, JWT auth, UUID request_id
-- Tkinter: echte API calls
-- Database schema deployment naar TiDB
+**Pico W (`PICO`, MicroPython):**
 
-## Datamodellen (Redesign - PostgreSQL)
+- WiFi-verbinding werkt.
+- ADC-lezingen voor LDR en draaiknop.
+- UDP-verzending naar `192.168.137.1:8080`.
+- Token staat in de JSON-payload. De Worker leest dit token niet.
+- `request_id` gebruikt `utime.ticks_ms()`, geen UUID v4.
+- Geen HTTPS en geen JWT.
 
-Zie `docs/Backend/DBs/Redesign/SQLdb.md` voor het volledige schema.
+**Tkinter (`TKinter-application`):**
 
-**Tabellen:**
+- Login met PBKDF2-HMAC-SHA256 (600.000 iteraties, 16-byte salt).
+- Dashboard met systeem actief/inactief-toggle.
+- Simulatie: deur, achterdeur en achterraam openen wanneer het systeem actief is.
+- Geen API-koppeling naar de Worker.
+
+**Nog niet geimplementeerd:**
+
+- Sensorinsertie in `measurements`.
+- JWT- of sessietokenvalidatie op beschermde endpoints.
+- Registratie van gebruikers.
+- Gateway-authenticatie via D1 `GatewayCredentials`.
+- DMZ: SQLite-buffering, forwarding naar de Worker en `/alarm`.
+- Pico W: HTTPS naar de Worker, JWT en UUID v4 `request_id`.
+- Tkinter: echte API-calls.
+- Verwijderen van de legacy `users`-tabel en `gateways.owner_user_id` uit TiDB.
+
+## Datamodellen
+
+### TiDB Cloud (sensordata)
+
+Zie `docs/Backend/DBs/Redesign/SQLdb.md` voor het volledige doelschema.
 
 | Tabel | Doel | Status |
 |-------|------|--------|
-| `gateways` | Raspberry Pi gateways, `hash` (SHA-256 token hash) | **Created** |
-| `devices` | Pico W sensor nodes | **Created** |
-| `sensors` | Sensors per device (`sensor_type`, `unit`, `name`) | **Created** |
-| `measurements` | Historical readings, `request_id` unique for deduplication | **Created** |
-| `alerts` | Security events (`alert_type`, `severity`, `is_resolved`) | **Created** |
-| `users` | Tkinter app users (Argon2id, **planned: scrypt**) | **Created** |
-| `api_keys` | Device/gateway auth keys (JWT issuance) | Pending |
+| `gateways` | Raspberry Pi-gateways | **Gedeployed** |
+| `devices` | Pico W-sensorknopen | **Gedeployed** |
+| `sensors` | Sensoren per device | **Gedeployed** |
+| `measurements` | Historische meetwaarden, `request_id` uniek | **Gedeployed** |
+| `alerts` | Beveiligingsgebeurtenissen | **Gedeployed** |
 
-*Oude schemas in `docs/Backend/DBs/TiDB/` en `docs/Backend/DBs/Azure/` zijn **verouderd** maar bewaard voor referentie.*
+De huidige TiDB-database bevat daarnaast nog een legacy `users`-tabel en `gateways.owner_user_id`. Die horen niet in het doelschema en worden verwijderd zodra de migratie is uitgevoerd.
 
-## Beveiliging (doel vs huidig)
+### Cloudflare D1 (identiteit)
+
+Zie `docs/Backend/DBs/D1/README.md`.
+
+| Tabel | Doel |
+|-------|------|
+| `Users` | Gebruikersaccounts en wachtwoordhashes |
+| `UserSessions` | Sessietokens met vervaltijd en intrekking |
+| `GatewayCredentials` | Gatewaytokens en eigenaar |
+
+D1 is de bron van waarheid voor identiteit. TiDB bevat in het doelschema geen gebruikers. De koppeling tussen beide databases verloopt via gedeelde UUID's en wordt door de Worker gevalideerd. Er is geen SQL foreign key tussen D1 en TiDB.
+
+De oude schema's in `docs/Backend/DBs/TiDB/` en `docs/Backend/DBs/Azure/` zijn verouderd en blijven alleen als referentie staan.
+
+## Beveiliging (doel versus huidig)
 
 | Aspect | Doel | Huidig |
 |--------|------|--------|
-| Architectuur | Zero Trust | Deels (Worker enige DB toegang) |
-| Transport | TLS overal | Worker→TiDB ✓; Pico→Worker ✗ (UDP lokaal) |
-| Auth Pico→Worker | JWT (device-scoped) | Hardcoded token in payload |
-| Auth DMZ→Worker | Bearer token (lang leven) | Nog niet geïmplementeerd |
-| Auth Tkinter→Worker | User/pass → JWT (Argon2id, **planned: scrypt**) | Nog niet geïmplementeerd |
-| Worker→TiDB | Hyperdrive binding (env var) | ✓ Geïmplementeerd |
-| Geheimen in Git | Nooit | ✓ (Hyperdrive binding, `localConnectionString` lokaal) |
-| Wachtwoorden | **scrypt (prod, planned)** / PBKDF2 (proto) | Tkinter: PBKDF2 ✓; Worker: Argon2id → **scrypt planned** |
-| Invoervalidatie | Zod schemas alle endpoints | ✗ Nog niet |
-| Duplicaatbescherming | `request_id` UNIQUE constraint | Schema ✓; Worker insert ✗ |
-| DB credentials | Alleen Worker via Hyperdrive | ✓ Geïmplementeerd |
+| Architectuur | Zero Trust | Deels: Worker heeft als enige databasetoegang. |
+| Transport | TLS overal | Worker naar TiDB via Hyperdrive: ja. Pico W naar Worker: nee, UDP. DMZ: lokaal zonder TLS. |
+| Auth Pico W naar Worker | Device-scoped JWT | Token in JSON-payload via UDP; Worker leest dit niet. |
+| Auth DMZ naar Worker | Bearer-token | Nog niet geimplementeerd. |
+| Auth Tkinter naar Worker | Login en sessietoken | Login geimplementeerd met D1 en scrypt. Geen JWT en geen beschermde endpoints. |
+| Worker naar TiDB | Hyperdrive-binding | Geimplementeerd. |
+| Worker naar D1 | D1-binding | Geimplementeerd voor login en sessies. |
+| Geheimen in Git | Nooit | Hyperdrive-binding en `localConnectionString` lokaal. |
+| Wachtwoorden | Sterke, langzame hash | Tkinter: PBKDF2. Worker: scrypt via `@better-auth/utils`. Argon2id via WASM is mogelijk, maar niet in gebruik. Benchmark nog open. |
+| Invoervalidatie | Zod-schema's op alle endpoints | Alleen handmatige basisvalidatie in de loginroute. |
+| Duplicaatbescherming | Unieke `request_id` | Schema gedefinieerd. Worker voert nog geen insert uit. |
+| DB-credentials | Alleen Worker via Hyperdrive en D1 | Geimplementeerd. |
 
 Zie `docs/security/threat-model.md` en `docs/security/infrastructure-plan.md` voor details.
 
-## Huidige status (CSC progress) - per repository
+## Huidige status per repository
 
-**`smart-system-worker` (MITM API, deployed):**
-- [x] Worker deployed op Cloudflare Workers
-- [x] `pg` driver + Hyperdrive binding werkt
-- [x] `GET /health` → 200 (met DB check)
-- [x] `POST /api/sensor-data` → 200 (maar alleen `pg_tables` select)
-- [x] `POST /auth` → 200 (stub)
-- [ ] Sensor-data INSERT in `measurements`
-- [ ] JWT validatie (nu: non-empty Bearer check)
-- [ ] Request validatie (Zod)
-- [ ] Rate limiting
-- [ ] Schema deployment naar TiDB
+**`MITM-server` (MITM API, gedeployed):**
 
-**`smart-system-dmz` (Flask op Raspberry Pi, lokaal):**
-- [x] `POST /sensor` → ontvangt JSON, print, 200
-- [x] `GET /health` → 200
-- [ ] SQLite buffering (`measurements_queue`)
-- [ ] Forwarding naar Worker `/api/sensor-data`
-- [ ] `POST /alarm` endpoint
-- [ ] systemd service configuratie
-- [ ] Pico W authenticatie (lokaal pad)
+- [x] Worker gedeployed op Cloudflare Workers.
+- [x] `pg`-driver en Hyperdrive-binding werken.
+- [x] `GET /health` -> 200, zonder databasecheck.
+- [x] `POST /api/sensor-data` -> 200, maar alleen `SELECT pg_tables`.
+- [x] `POST /auth/login` -> geimplementeerd met D1 en scrypt.
+- [x] `POST /auth/register` -> stub.
+- [ ] Sensorinsertie in `measurements`.
+- [ ] Sessietoken- of JWT-validatie op beschermde endpoints.
+- [ ] Registratie.
+- [ ] Gateway-authenticatie via D1.
+- [ ] Rate limiting.
+- [ ] Zod-validatie.
+- [ ] Structured logging.
 
-**`smart-system-pico` (MicroPython):**
-- [x] WiFi connectie
-- [x] ADC lezing (LDR, draaiknop)
-- [x] UDP verzending naar hardcoded IP:port
-- [ ] HTTPS naar Worker endpoint
-- [ ] JWT auth (device token)
-- [ ] UUID v4 `request_id`
-- [ ] Offline queue / retry logica
+**`DMZ` (Flask op Raspberry Pi, lokaal):**
 
-**`smart-system-tkinter` (Desktop):**
-- [x] PBKDF2-HMAC-SHA256 login (600k iter, 16-byte salt)
-- [x] Azure light theme
-- [x] Dashboard met actief/inactief toggle
-- [x] Simulatie: deur/achterdeur/achterraam
-- [ ] API koppeling naar Worker (login, status, sensor data)
-- [ ] Alert weergave
-- [ ] Multi-user support
-- [ ] Config via env/config bestand
+- [x] `POST /sensor` -> ontvangt JSON, print, 200.
+- [x] `GET /health` -> 200.
+- [ ] SQLite-buffering (`measurements_queue`).
+- [ ] Forwarding naar de Worker.
+- [ ] `POST /alarm`.
+- [ ] `systemd`-serviceconfiguratie.
+- [ ] Pico W-authenticatie.
 
-**Database (`docs/Backend/DBs/Redesign/`):**
-- [x] Schema gedefinieerd: gateways, devices, sensors, measurements, alerts
-- [ ] Deployment naar TiDB Cloud via Hyperdrive
+**`PICO` (MicroPython):**
 
-## Nog te bepalen / open punten
+- [x] WiFi-verbinding.
+- [x] ADC-lezingen voor LDR en draaiknop.
+- [x] UDP-verzending naar een hardcoded IP en poort.
+- [x] Token in de JSON-payload.
+- [ ] HTTPS naar het Worker-endpoint.
+- [ ] JWT-authenticatie.
+- [ ] UUID v4 `request_id`.
+- [ ] Offline queue en retry-logica.
 
-- Pico W → Worker protocol: HTTPS + JWT (nu: UDP lokaal)
-- DMZ ↔ Pico W lokaal protocol: HTTP, MQTT, of WebSocket?
-- Device onboarding / provisioning flow (QR code? unieke secret?)
-- Netwerkuitval: DMZ SQLite buffering + Pico W offline queue
-- Toegangscontrole hardware (RFID / keypad / pincode) - op DMZ
-- Alarm hardware (buzzer, LED) - op DMZ
-- Monitoring & alerting (uptime, healthchecks, Hyperdrive pool)
-- Database schema deployment naar TiDB Cloud
+**`TKinter-application` (desktop):**
 
-## Documentatie overzicht
+- [x] PBKDF2-HMAC-SHA256-login (600.000 iteraties, 16-byte salt).
+- [x] Azure light-thema.
+- [x] Dashboard met actief/inactief-toggle.
+- [x] Simulatie van deur, achterdeur en achterraam.
+- [ ] API-koppeling naar de Worker.
+- [ ] Alertweergave.
+- [ ] Multi-userondersteuning.
+- [ ] Configuratie via omgevingsvariabelen of configbestand.
+
+**Database:**
+
+- [x] TiDB-doelschema gedefinieerd: `gateways`, `devices`, `sensors`, `measurements`, `alerts`.
+- [x] TiDB-schema gedeployed. De database bevat nog een legacy `users`-tabel.
+- [x] D1-identiteitsschema gedefinieerd en gedeployed.
+- [ ] Legacy `users` en `gateways.owner_user_id` uit TiDB verwijderen.
+
+## Openstaande punten
+
+- Pico W naar Worker: HTTPS en JWT implementeren. Nu UDP met een token in de payload.
+- DMZ naar Pico W: lokaal protocol kiezen (HTTP, MQTT of WebSocket).
+- Device-onboarding en provisioning: QR-code, uniek secret of certificaat.
+- Netwerkuitval: DMZ SQLite-buffering en Pico W offline queue.
+- Toegangscontrolehardware (RFID, keypad of pincode) op de DMZ.
+- Alarmhardware (buzzer, LED) op de DMZ.
+- Monitoring en alerting voor uptime, healthchecks en Hyperdrive-pool.
+- Legacy-identiteit uit TiDB verwijderen.
+- Scrypt benchmarken binnen de Workers CPU- en geheugenlimieten.
+- Beslissen of Argon2id via WASM nodig is op basis van de benchmark.
+
+## Documentatieoverzicht
 
 | Bestand | Onderwerp |
 |---|---|
-| `docs/README.md` | Documentatie index |
-| `docs/Backend/DBs/Redesign/SQLdb.md` | **Nieuw** database schema & relaties (PostgreSQL) |
-| `docs/Backend/DBs/Redesign/query.sql` | **Nieuw** DDL statements |
-| `docs/Backend/DBs/TiDB/SQLdb.md` | Verouderd: TiDB schema - voor referentie |
-| `docs/Backend/DBs/TiDB/query.sql` | Verouderd: TiDB DDL - voor referentie |
-| `docs/Backend/DBs/Azure/SQLdb.md` | Verouderd: Azure SQL schema - voor referentie |
-| `docs/Backend/DBs/Azure/query.sql` | Verouderd: Azure SQL DDL - voor referentie |
-| `docs/Backend/DBs/D1/0001_initial.sql` | Verouderd: D1 migratie |
-| `docs/Backend/MITM/MITM.md` | MITM server ontwerp (pg + Hyperdrive) |
+| `docs/README.md` | Documentatie-index |
+| `docs/Backend/DBs/Redesign/SQLdb.md` | Doelschema voor TiDB en cross-database-relaties |
+| `docs/Backend/DBs/Redesign/query.sql` | DDL voor het doelschema en migratiestappen |
+| `docs/Backend/DBs/D1/README.md` | D1-identiteitsschema |
+| `docs/Backend/DBs/TiDB/SQLdb.md` | Verouderd TiDB-schema, alleen referentie |
+| `docs/Backend/DBs/Azure/SQLdb.md` | Verouderd Azure SQL-schema, alleen referentie |
+| `docs/Backend/MITM/MITM.md` | MITM-serverontwerp en huidige status |
 | `docs/Backend/MITM/MITM-roadmap.md` | Beveiligingsroadmap |
-| `docs/Backend/DMZ.md` | Raspberry Pi gateway design (lokaal alarm & buffering) |
-| `docs/security/threat-model.md` | Threat model (STRIDE-achtig) |
-| `docs/security/infrastructure-plan.md` | Hosting, back-ups, HA, DR |
-| `docs/TI/modules.md` | Hardware modules (PIR, laser) |
-| `docs/TI/webtest.md` | JSON protocolle voorbeelden (oude LAN-test) |
-| `docs/Brand guidelines/` | Logo's, kleurenpalet (#0B1020, #7C9DFF, #F2F4F8) |
+| `docs/Backend/DMZ.md` | Raspberry Pi-gatewayontwerp |
+| `docs/security/threat-model.md` | Dreigingsmodel |
+| `docs/security/infrastructure-plan.md` | Hosting, back-ups, beschikbaarheid en herstel |
+| `docs/TI/modules.md` | Hardwaremodules |
+| `docs/TI/webtest.md` | JSON-protocolvoorbeelden uit de eerste LAN-test |
+| `docs/Brand guidelines/` | Logo's en kleurenpalet |
 | `docs/bim/Stakeholderanalyse_Smart_System.docx` | Stakeholderanalyse |
 
-## Subprojecten (losse repositories, nog aan te maken)
+## Subprojecten
 
-| Subproject | Repo (gepland) | Beschrijving |
-|------------|----------------|--------------|
-| Tkinter Desktop App | `smart-system-tkinter` | Python + Tkinter, Azure theme, auth, dashboard |
-| DMZ Gateway | `smart-system-dmz` | Flask op Raspberry Pi, `/sensor`, `/health`, `/alarm`, SQLite buffering |
-| MITM Worker | `smart-system-worker` | Cloudflare Worker, Node.js HTTP compat, `pg` + Hyperdrive |
-| Pico W Firmware | `smart-system-pico` | MicroPython, WiFi, HTTPS → Worker, sensor drivers |
+| Subproject | Repository | Beschrijving |
+|---|---|---|
+| Tkinter-desktopapp | `TKinter-application` | Python en Tkinter, Azure-thema, login, dashboard en simulatie |
+| DMZ-gateway | `DMZ` | Flask op Raspberry Pi, `/sensor` en `/health` |
+| MITM Worker | `MITM-server` | Cloudflare Worker, Node.js HTTP-compat, `pg` en Hyperdrive |
+| Pico W-firmware | `PICO` | MicroPython, WiFi, UDP en sensordrivers |
+| Azure-DB-Bridge | `Azure-DB-Bridge` | Legacy, niet actief |
