@@ -57,7 +57,7 @@ De volgende onderdelen zijn gedeployed of lokaal werkend:
 - **D1:** binding `smart_system_identity` is actief. De loginroute gebruikt `Users`, `UserSessions` en `GatewayCredentials`.
 - **Endpoints:**
   - `GET /health` -> 200 met `{"status":"ok"}`. Geen databasecheck.
-  - `POST /api/sensor-data` -> 200 na een non-empty Bearer-check en `SELECT pg_tables`. Geen insert.
+  - `POST /api/sensor-data` -> 200 na een `allow_sensor_receiving`-check, een non-empty Bearer-check en `SELECT pg_tables`. Geen insert.
   - `POST /auth/login` -> geimplementeerd met D1 en scrypt.
   - `POST /auth/register` -> stub.
   - `GET /auth` -> 404 met een verwijzing naar de login- en registratieroutes.

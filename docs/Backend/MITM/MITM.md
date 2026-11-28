@@ -45,7 +45,7 @@ De Worker is de enige component met databasetoegang. Pico W, DMZ en Tkinter hebb
 | `/auth/login` | POST | Geimplementeerd. Leest D1, verifieert het wachtwoord en maakt een sessietoken. |
 | `/auth/register` | POST | Stub. Controleert alleen `allow_registration` en retourneert 200 of 423. |
 | `/auth` | GET | Retourneert 404 met een verwijzing naar `/auth/login` en `/auth/register`. |
-| `/api/sensor-data` | POST | Accepteert een request, controleert een non-empty Bearer-token en voert `SELECT * FROM pg_tables` uit. Geen insert. |
+| `/api/sensor-data` | POST | Controleert `allow_sensor_receiving` uit KV, vereist een non-empty Bearer-token en voert `SELECT * FROM pg_tables` uit. Geen insert. |
 | `/legacy/*` | - | Retourneert 404. Verouderde routes zijn verwijderd. |
 
 ## Authenticatie

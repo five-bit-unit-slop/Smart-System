@@ -21,7 +21,7 @@
 
 - [x] Code MITM API online op Cloudflare Workers.
 - [x] Code `GET /health` retourneert HTTP 200 met `{"status":"ok"}`. Geen databasecheck.
-- [x] Code `POST /api/sensor-data` retourneert HTTP 200 na een non-empty Bearer-check en `SELECT pg_tables`. Geen insert.
+- [x] Code `POST /api/sensor-data` retourneert HTTP 200 na een `allow_sensor_receiving`-check, een non-empty Bearer-check en `SELECT pg_tables`. Geen insert.
 - [x] Code `POST /auth/login` geimplementeerd met D1, scrypt en sessietoken.
 - [x] Code `POST /auth/register` stub. Controleert alleen `allow_registration`.
 - [x] Code `GET /auth` retourneert 404 met een verwijzing naar de juiste routes.

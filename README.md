@@ -77,7 +77,7 @@ De Worker is gedeployed. `/health` en `/api/sensor-data` zijn getest. De loginro
 **Cloudflare Worker (`MITM-server`, gedeployed):**
 
 - `GET /health` -> HTTP 200 met `{"status":"ok"}`. Geen databasecheck.
-- `POST /api/sensor-data` -> HTTP 200. Controleert een non-empty Bearer-token en voert `SELECT * FROM pg_tables` uit via Hyperdrive. Geen insert.
+- `POST /api/sensor-data` -> HTTP 200. Controleert `allow_sensor_receiving` uit KV en een non-empty Bearer-token, en voert `SELECT * FROM pg_tables` uit via Hyperdrive. Geen insert.
 - `POST /auth/login` -> geimplementeerd. Leest D1, verifieert het wachtwoord met scrypt en maakt een sessietoken.
 - `POST /auth/register` -> stub. Controleert alleen `allow_registration` en retourneert 200 of 423.
 - `GET /auth` -> 404 met een verwijzing naar `/auth/login` en `/auth/register`.
