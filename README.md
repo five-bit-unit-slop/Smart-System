@@ -120,7 +120,7 @@ Zie `docs/Backend/DBs/Redesign/SQLdb.md` voor het volledige schema.
 | `sensors` | Sensors per device (`sensor_type`, `unit`, `name`) | **Created** |
 | `measurements` | Historical readings, `request_id` unique for deduplication | **Created** |
 | `alerts` | Security events (`alert_type`, `severity`, `is_resolved`) | **Created** |
-| `users` | Tkinter app users (Argon2id) | **Created** |
+| `users` | Tkinter app users (Argon2id, **planned: scrypt**) | **Created** |
 | `api_keys` | Device/gateway auth keys (JWT issuance) | Pending |
 
 *Oude schemas in `docs/Backend/DBs/TiDB/` en `docs/Backend/DBs/Azure/` zijn **verouderd** maar bewaard voor referentie.*
@@ -133,10 +133,10 @@ Zie `docs/Backend/DBs/Redesign/SQLdb.md` voor het volledige schema.
 | Transport | TLS overal | Worker→TiDB ✓; Pico→Worker ✗ (UDP lokaal) |
 | Auth Pico→Worker | JWT (device-scoped) | Hardcoded token in payload |
 | Auth DMZ→Worker | Bearer token (lang leven) | Nog niet geïmplementeerd |
-| Auth Tkinter→Worker | User/pass → JWT (Argon2id) | Nog niet geïmplementeerd |
+| Auth Tkinter→Worker | User/pass → JWT (Argon2id, **planned: scrypt**) | Nog niet geïmplementeerd |
 | Worker→TiDB | Hyperdrive binding (env var) | ✓ Geïmplementeerd |
 | Geheimen in Git | Nooit | ✓ (Hyperdrive binding, `localConnectionString` lokaal) |
-| Wachtwoorden | Argon2id (prod) / PBKDF2 (proto) | Tkinter: PBKDF2 ✓; Worker: nog niet |
+| Wachtwoorden | **scrypt (prod, planned)** / PBKDF2 (proto) | Tkinter: PBKDF2 ✓; Worker: Argon2id → **scrypt planned** |
 | Invoervalidatie | Zod schemas alle endpoints | ✗ Nog niet |
 | Duplicaatbescherming | `request_id` UNIQUE constraint | Schema ✓; Worker insert ✗ |
 | DB credentials | Alleen Worker via Hyperdrive | ✓ Geïmplementeerd |

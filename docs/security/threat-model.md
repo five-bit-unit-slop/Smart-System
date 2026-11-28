@@ -45,7 +45,7 @@ Cloudflare Worker
 
 | Dreiging | Gevolg | Maatregel |
 |---|---|---|
-| Tkinter-applicatie hacken | Ongeautoriseerde acties | Authenticatie (Argon2id) + JWT + rol-gebaseerde autorisatie |
+| Tkinter-applicatie hacken | Ongeautoriseerde acties | Authenticatie (scrypt, Argon2id not on Workers) + JWT + rol-gebaseerde autorisatie |
 | Netwerkverkeer onderscheppen | Gegevens uitlekken of wijzigen | TLS 1.2+ overal (Cloudflare edge, Hyperdrive, TiDB) |
 | Toegangsgegevens kopiëren | Ongewenste toegang | Secrets in Cloudflare Workers env vars; geen credentials in code/Git |
 | MITM API misbruiken | Systeem of gegevens manipuleren | JWT validatie (nog niet geïmplementeerd, nu non-empty Bearer check), rate limiting (nog niet), invoervalidatie (nog niet) |
@@ -60,7 +60,7 @@ Cloudflare Worker
 - Authenticatie voor alle clients (Pico W: JWT — **nog niet geïmplementeerd**; DMZ: Bearer token — **non-empty check**; Tkinter: user/pass → JWT — **nog niet**).
 - Autorisatie voor beveiligingsacties (Admin/User rollen) — **nog niet**.
 - Versleutelde netwerkcommunicatie (TLS end-to-end) — **geïmplementeerd** (Cloudflare edge, Hyperdrive, TiDB).
-- Veilige opslag van wachtwoorden (Argon2id) — **in Tkinter (PBKDF2), Worker nog niet**.
+- Veilige opslag van wachtwoorden (scrypt, Argon2id not on Workers) — **in Tkinter (PBKDF2), Worker: scrypt planned**.
 - Geen API-sleutels, wachtwoorden, connection strings in Git — **geïmplementeerd** (Hyperdrive binding, `localConnectionString` lokaal).
 - Invoervalidatie op alle API-endpoints (Zod schemas) — **nog niet geïmplementeerd**.
 - Belangrijke gebeurtenissen loggen (structured JSON, Cloudflare Logs) — **nog niet**.

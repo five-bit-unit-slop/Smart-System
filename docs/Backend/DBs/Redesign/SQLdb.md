@@ -226,12 +226,12 @@ CREATE TABLE users(
 |--------|------|-------------|-------------|
 | `id` | UUID | PK, `DEFAULT gen_random_uuid()` | Unique user identifier |
 | `username` | VARCHAR(255) | NOT NULL, UNIQUE | Login username |
-| `password_hash` | VARCHAR(255) | NOT NULL | Argon2id hash of password |
+| `password_hash` | VARCHAR(255) | NOT NULL | scrypt hash of password (format: `scrypt$N$r$p$salt$key`) |
 | `created_at` | TIMESTAMPTZ | NOT NULL, `DEFAULT now()` | Registration timestamp |
 | `is_active` | BOOLEAN | NOT NULL, `DEFAULT true` | Soft disable flag |
 
 **Notes:**
-- `password_hash` stores Argon2id hash (recommended) or PBKDF2-HMAC-SHA256 (legacy)
+- `password_hash` stores scrypt hash (format: `scrypt$N$r$p$salt$key`, base64 components). Argon2id not supported on Cloudflare Workers.
 - `is_active` allows disabling account without deletion
 
 ## API Keys (Planned)

@@ -111,7 +111,7 @@ Aanvullende CHECK-constraint:
 - Primaire sleutels zijn uniek.
 - Foreign keys waarborgen referentiële integriteit.
 - Foreign keys verwijzen naar de primaire sleutel van de gekoppelde parent-tabel.
-- Gebruikerswachtwoorden worden gehasht met Argon2id.
+- Gebruikerswachtwoorden worden gehasht met scrypt (Argon2id niet ondersteund op Cloudflare Workers).
 - Authenticatietokens worden niet als plaintext opgeslagen.
 - Alleen gateways hebben een cloud-authenticatietoken.
 - Pico W-apparaten communiceren lokaal met de Raspberry Pi en authenticeren niet rechtstreeks bij de MITM API.

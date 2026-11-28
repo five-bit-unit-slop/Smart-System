@@ -28,7 +28,7 @@ De Worker is de enige component met database-toegang. Pico W, DMZ en Tkinter com
 - [ ] Pico W device registratie en JWT issuance (`/auth/register`, `/auth/token`)
 - [ ] JWT validatie middleware op `/api/sensor-data` (nu: non-empty Bearer token check)
 - [ ] Gateway (DMZ) Bearer token validatie voor fallback endpoints
-- [ ] Tkinter user auth: Argon2id verify → JWT issuance
+- [ ] Tkinter user auth: scrypt verify → JWT issuance (Argon2id not supported on Workers)
 - [ ] Rol-gebaseerde autorisatie (Admin/User) voor Tkinter endpoints
 - [ ] Token refresh / revocatie strategie
 

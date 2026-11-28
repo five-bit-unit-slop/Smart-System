@@ -115,7 +115,7 @@ Aanvullende CHECK-constraint:
 - Primaire sleutels zijn UUIDs, gegenereerd met gen_random_uuid() (vereist pgcrypto extensie).
 - Foreign keys waarborgen referentiële integriteit.
 - Foreign keys verwijzen naar de primaire sleutel van de gekoppelde parent-tabel.
-- Gebruikerswachtwoorden worden gehasht met Argon2id.
+- Gebruikerswachtwoorden worden gehasht met scrypt (Argon2id niet ondersteund op Cloudflare Workers).
 - Authenticatietokens worden niet als plaintext opgeslagen.
 - Alleen gateways hebben een cloud-authenticatietoken.
 - Pico W-apparaten authenticeren niet rechtstreeks bij de database; ze communiceren via de Worker.

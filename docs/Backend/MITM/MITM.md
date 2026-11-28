@@ -32,7 +32,7 @@ De Pico W stuurt sensor data rechtstreeks naar de Cloudflare Worker (geen Raspbe
 
 - **Pico W → Worker**: JWT (device-scoped, short-lived) — **nog niet geïmplementeerd**
 - **Gateway (DMZ) → Worker**: Bearer token (lange leven, voor fallback/buffering) — **non-empty check only**
-- **Tkinter → Worker**: User credentials → JWT (Argon2id verify) — **nog niet geïmplementeerd**
+- **Tkinter → Worker**: User credentials → JWT (scrypt verify, Argon2id not supported on Workers) — **nog niet geïmplementeerd**
 - **Worker → TiDB**: Hyperdrive connection string via binding, nooit in code
 
 ## Database operations
